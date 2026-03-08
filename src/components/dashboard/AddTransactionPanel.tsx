@@ -12,6 +12,7 @@ export interface AddTransactionPanelProps {
     numRecibo?: string;
     montoEsperado?: string;
     monto?: string;
+    montoTransaccion?: string;
     type?: TransactionType;
     isEditing?: boolean;
   } | null;
@@ -25,6 +26,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
   const [numRecibo, setNumRecibo] = useState('');
   const [montoEsperado, setMontoEsperado] = useState('');
   const [montoRecibido, setMontoRecibido] = useState('');
+  const [montoTransaccion, setMontoTransaccion] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -35,9 +37,11 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
         
         const cleanMontoEsperado = initialData.montoEsperado ? initialData.montoEsperado.replace(/[^-0-9.]/g, '') : '';
         const cleanMontoRecibido = initialData.monto ? initialData.monto.replace(/[^-0-9.]/g, '') : '';
+        const cleanMontoTransaccion = initialData.montoTransaccion ? initialData.montoTransaccion.replace(/[^-0-9.]/g, '') : '';
         
         setMontoEsperado(cleanMontoEsperado);
         setMontoRecibido(cleanMontoRecibido);
+        setMontoTransaccion(cleanMontoTransaccion);
         
         if (initialData.type) {
           setType(initialData.type);
@@ -48,6 +52,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
         setNumRecibo('');
         setMontoEsperado('');
         setMontoRecibido('');
+        setMontoTransaccion('');
         setType('poliza');
       }
     }
@@ -61,7 +66,8 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
       polizaCobranza, 
       numRecibo, 
       montoEsperado, 
-      monto: montoRecibido 
+      monto: montoRecibido,
+      montoTransaccion 
     });
     onClose();
   };
@@ -214,6 +220,20 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
                   required
                 />
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="montoTransaccion" className="block text-sm font-semibold text-gray-900 mb-2">
+                Monto Transacción
+              </label>
+              <input
+                type="text"
+                id="montoTransaccion"
+                value={montoTransaccion}
+                onChange={(e) => setMontoTransaccion(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900"
+                placeholder="Ej. 1000.00"
+              />
             </div>
           </form>
         </div>

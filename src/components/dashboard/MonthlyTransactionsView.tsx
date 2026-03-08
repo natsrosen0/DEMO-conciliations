@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Upload, MoreHorizontal, Trash2 } from 'lucide-react';
 import { ReconciliationDetail } from './ReconciliationDetail';
+import { BulkUploadPanel } from './BulkUploadPanel';
 import { hoteleraTransactions, MonthlyTransaction } from '../../data/hoteleraTransactions';
 
 interface MonthlyTransactionsViewProps {
@@ -13,6 +14,9 @@ const defaultTransactions: MonthlyTransaction[] = [];
 
 export function MonthlyTransactionsView({ clientName, monthName, onBack }: MonthlyTransactionsViewProps) {
   const [selectedTxn, setSelectedTxn] = useState<MonthlyTransaction | null>(null);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+  const [reconciliationToDelete, setReconciliationToDelete] = useState<string | null>(null);
   const storageKey = `nats_conciliation_reconciliations_${clientName}_${monthName}`;
   
   const [transactions, setTransactions] = useState<MonthlyTransaction[]>(() => {
@@ -78,6 +82,61 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
     setTransactions(prev => [newReconciliation, ...prev]);
   };
 
+  const handleBulkUpload = (data: any[]) => {
+    const today = new Date();
+    const formattedDate = today.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const newId = `TXN-${(transactions.length + 1).toString().padStart(3, '0')}`;
+    
+    // 1. Calculate totals for the new reconciliation
+    const totalEsperado = data.reduce((sum, item) => sum + parseCurrency(item.montoEsperado), 0);
+    // Use the transaction amount from the first row if provided, otherwise sum up the individual amounts
+    const firstRowMontoTransaccion = parseCurrency(data[0]?.montoTransaccion);
+    const totalRecibido = firstRowMontoTransaccion !== 0 ? firstRowMontoTransaccion : data.reduce((sum, item) => sum + parseCurrency(item.monto), 0);
+    const diff = totalRecibido - totalEsperado;
+
+    const newReconciliation: MonthlyTransaction = {
+      id: newId,
+      fecha: formattedDate,
+      numRecibos: data.length,
+      montoRecibido: formatCurrency(totalRecibido),
+      montoEsperado: formatCurrency(totalEsperado),
+      diferencia: (diff >= 0 ? '+' : '-') + formatCurrency(Math.abs(diff)),
+      estado: Math.abs(diff) < 0.01 ? 'Conciliado' : 'No conciliado'
+    };
+
+    // 2. Save the transactions for this new reconciliation to localStorage
+    const txnKey = `nats_conciliation_txns_${clientName}_${monthName}_${newId}`;
+    const formattedTxns = data.map(item => ({
+      id: Math.random().toString(36).substr(2, 9),
+      polizaPadre: item.polizaPadre,
+      polizaCobranza: item.polizaCobranza,
+      numRecibo: item.numRecibo,
+      montoEsperado: formatCurrency(parseCurrency(item.montoEsperado)),
+      monto: formatCurrency(parseCurrency(item.monto)),
+    }));
+    localStorage.setItem(txnKey, JSON.stringify(formattedTxns));
+
+    // 3. Add to the list
+    setTransactions(prev => [newReconciliation, ...prev]);
+    setIsBulkUploadOpen(false);
+  };
+
+  const handleDeleteReconciliation = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReconciliationToDelete(id);
+    setActiveDropdownId(null);
+  };
+
+  const confirmDelete = () => {
+    if (reconciliationToDelete) {
+      setTransactions(prev => prev.filter(t => t.id !== reconciliationToDelete));
+      // Also clean up the associated transactions in localStorage
+      const txnKey = `nats_conciliation_txns_${clientName}_${monthName}_${reconciliationToDelete}`;
+      localStorage.removeItem(txnKey);
+      setReconciliationToDelete(null);
+    }
+  };
+
   const totalRecibido = transactions.reduce((sum, txn) => {
     return sum + parseCurrency(txn.montoRecibido);
   }, 0);
@@ -116,13 +175,22 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
             <p className="text-sm text-gray-500">{transactions.length} transacciones</p>
           </div>
         </div>
-        <button 
-          onClick={handleAddReconciliation}
-          className="flex items-center gap-2 bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Agregar
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsBulkUploadOpen(true)}
+            className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            <Upload className="w-4 h-4" />
+            Carga Masiva
+          </button>
+          <button 
+            onClick={handleAddReconciliation}
+            className="flex items-center gap-2 bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Agregar
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -160,6 +228,7 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500">Monto Esperado</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500">Diferencia</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500">Estado</th>
+                <th className="py-3 px-4 text-xs font-semibold text-gray-500 w-12"></th>
               </tr>
             </thead>
             <tbody>
@@ -186,6 +255,32 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
                         {row.estado}
                       </span>
                     </td>
+                    <td className="py-3 px-4 relative">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveDropdownId(activeDropdownId === row.id ? null : row.id);
+                        }}
+                        className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                      >
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+                      
+                      {activeDropdownId === row.id && (
+                        <div 
+                          className="absolute right-8 top-10 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={(e) => handleDeleteReconciliation(row.id, e)}
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Eliminar
+                          </button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -193,6 +288,45 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
           </table>
         </div>
       </div>
+
+      <BulkUploadPanel
+        isOpen={isBulkUploadOpen}
+        onClose={() => setIsBulkUploadOpen(false)}
+        onUpload={handleBulkUpload}
+      />
+
+      {/* Delete Confirmation Modal */}
+      {reconciliationToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-4 mb-6 text-red-600">
+              <div className="p-3 bg-red-50 rounded-full">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">¿Eliminar conciliación?</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-8">
+              Esta acción no se puede deshacer. Se eliminarán todos los recibos asociados a esta conciliación.
+            </p>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setReconciliationToDelete(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

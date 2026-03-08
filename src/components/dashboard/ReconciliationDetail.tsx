@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Plus, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, MoreHorizontal, Trash2, Upload } from 'lucide-react';
 import { AddTransactionPanel, TransactionType } from './AddTransactionPanel';
+import { BulkUploadPanel } from './BulkUploadPanel';
 
 interface Transaction {
   id: string;
@@ -9,6 +10,7 @@ interface Transaction {
   numRecibo: string;
   montoEsperado: string;
   monto: string;
+  montoTransaccion?: string;
 }
 
 const initialTransactions: Transaction[] = [
@@ -40,6 +42,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
   }, [transactions, storageKey]);
 
   const [isCreditNotePanelOpen, setIsCreditNotePanelOpen] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [selectedTransactionData, setSelectedTransactionData] = useState<{
     id?: string;
     polizaPadre: string;
@@ -51,6 +54,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
     isEditing?: boolean;
   } | null>(null);
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,6 +80,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
     // Clean and parse the amounts using the same logic as parseCurrency
     const amountEsperado = parseCurrency(data.montoEsperado);
     const amountRecibido = parseCurrency(data.monto);
+    const amountTransaccion = parseCurrency(data.montoTransaccion);
     
     if (isNaN(amountEsperado) || isNaN(amountRecibido)) {
       console.error('Invalid amount entered:', data.montoEsperado, data.monto);
@@ -93,6 +98,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
             numRecibo: data.numRecibo || t.numRecibo,
             montoEsperado: formatCurrency(amountEsperado),
             monto: formatCurrency(amountRecibido),
+            montoTransaccion: amountTransaccion !== 0 ? formatCurrency(amountTransaccion) : t.montoTransaccion,
           };
         }
         return t;
@@ -106,6 +112,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
         numRecibo: data.numRecibo || (data.type === 'nota_credito' ? `NC-${Math.floor(Math.random() * 10000)}` : `REC-${Math.floor(Math.random() * 10000)}`),
         montoEsperado: formatCurrency(amountEsperado),
         monto: formatCurrency(amountRecibido),
+        montoTransaccion: amountTransaccion !== 0 ? formatCurrency(amountTransaccion) : undefined,
       };
 
       // Add to the beginning of the list so it's visible immediately
@@ -115,10 +122,32 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
     setIsCreditNotePanelOpen(false);
   };
 
+  const handleBulkUpload = (data: any[]) => {
+    const newTransactions: Transaction[] = data.map(item => ({
+      id: Math.random().toString(36).substr(2, 9),
+      polizaPadre: item.polizaPadre,
+      polizaCobranza: item.polizaCobranza,
+      numRecibo: item.numRecibo,
+      montoEsperado: formatCurrency(parseCurrency(item.montoEsperado)),
+      monto: formatCurrency(parseCurrency(item.monto)),
+      montoTransaccion: formatCurrency(parseCurrency(item.montoTransaccion)),
+    }));
+
+    setTransactions(prev => [...newTransactions, ...prev]);
+    setIsBulkUploadOpen(false);
+  };
+
   const handleDeleteTransaction = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setTransactions(prev => prev.filter(t => t.id !== id));
+    setTransactionToDelete(id);
     setActiveDropdownId(null);
+  };
+
+  const confirmDelete = () => {
+    if (transactionToDelete) {
+      setTransactions(prev => prev.filter(t => t.id !== transactionToDelete));
+      setTransactionToDelete(null);
+    }
   };
 
   const openTransactionPanel = (transaction?: Transaction, type?: TransactionType, isEditing: boolean = false) => {
@@ -198,13 +227,22 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
           </div>
         </div>
         
-        <button 
-          onClick={() => openTransactionPanel()}
-          className="flex items-center gap-2 bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Agregar
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsBulkUploadOpen(true)}
+            className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            <Upload className="w-4 h-4" />
+            Carga Masiva
+          </button>
+          <button 
+            onClick={() => openTransactionPanel()}
+            className="flex items-center gap-2 bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Agregar
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -239,7 +277,8 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500">Póliza de Cobranza</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500">Num. Recibo</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500">Monto Esperado</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Monto</th>
+                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Monto Recibido</th>
+                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Monto Transacción</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500">Estado</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-500 w-12"></th>
               </tr>
@@ -256,6 +295,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
                     <td className="py-3 px-4 text-xs text-gray-900">{row.numRecibo}</td>
                     <td className="py-3 px-4 text-xs text-gray-500">{row.montoEsperado}</td>
                     <td className="py-3 px-4 text-xs font-semibold text-gray-900">{row.monto}</td>
+                    <td className="py-3 px-4 text-xs text-gray-500">{row.montoTransaccion || '-'}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
                         estado === 'Conciliado' 
@@ -314,6 +354,45 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
         initialData={selectedTransactionData}
         onSubmit={handleCreateTransaction}
       />
+
+      <BulkUploadPanel
+        isOpen={isBulkUploadOpen}
+        onClose={() => setIsBulkUploadOpen(false)}
+        onUpload={handleBulkUpload}
+      />
+
+      {/* Delete Confirmation Modal */}
+      {transactionToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-4 mb-6 text-red-600">
+              <div className="p-3 bg-red-50 rounded-full">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">¿Eliminar recibo?</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-8">
+              Esta acción no se puede deshacer. El recibo será eliminado permanentemente de esta conciliación.
+            </p>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setTransactionToDelete(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
