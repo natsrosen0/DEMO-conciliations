@@ -10,6 +10,7 @@ export interface AddTransactionPanelProps {
     polizaPadre: string;
     polizaCobranza: string;
     numRecibo?: string;
+    montoEsperado?: string;
     monto?: string;
     type?: TransactionType;
     isEditing?: boolean;
@@ -22,7 +23,8 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
   const [polizaPadre, setPolizaPadre] = useState('');
   const [polizaCobranza, setPolizaCobranza] = useState('');
   const [numRecibo, setNumRecibo] = useState('');
-  const [monto, setMonto] = useState('');
+  const [montoEsperado, setMontoEsperado] = useState('');
+  const [montoRecibido, setMontoRecibido] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -30,9 +32,12 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
         setPolizaPadre(initialData.polizaPadre || '');
         setPolizaCobranza(initialData.polizaCobranza || '');
         setNumRecibo(initialData.numRecibo || '');
-        // Clean monto if it comes with currency symbols
-        const cleanMonto = initialData.monto ? initialData.monto.replace(/[$,]/g, '') : '';
-        setMonto(cleanMonto);
+        
+        const cleanMontoEsperado = initialData.montoEsperado ? initialData.montoEsperado.replace(/[^-0-9.]/g, '') : '';
+        const cleanMontoRecibido = initialData.monto ? initialData.monto.replace(/[^-0-9.]/g, '') : '';
+        
+        setMontoEsperado(cleanMontoEsperado);
+        setMontoRecibido(cleanMontoRecibido);
         
         if (initialData.type) {
           setType(initialData.type);
@@ -41,7 +46,8 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
         setPolizaPadre('');
         setPolizaCobranza('');
         setNumRecibo('');
-        setMonto('');
+        setMontoEsperado('');
+        setMontoRecibido('');
         setType('poliza');
       }
     }
@@ -49,7 +55,14 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ type, polizaPadre, polizaCobranza, numRecibo, monto });
+    onSubmit({ 
+      type, 
+      polizaPadre, 
+      polizaCobranza, 
+      numRecibo, 
+      montoEsperado, 
+      monto: montoRecibido 
+    });
     onClose();
   };
 
@@ -172,19 +185,35 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
               />
             </div>
 
-            <div>
-              <label htmlFor="monto" className="block text-sm font-semibold text-gray-900 mb-2">
-                Monto
-              </label>
-              <input
-                type="text"
-                id="monto"
-                value={monto}
-                onChange={(e) => setMonto(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900"
-                placeholder="Ej. 500.00"
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="montoEsperado" className="block text-sm font-semibold text-gray-900 mb-2">
+                  Monto Esperado
+                </label>
+                <input
+                  type="text"
+                  id="montoEsperado"
+                  value={montoEsperado}
+                  onChange={(e) => setMontoEsperado(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900"
+                  placeholder="Ej. 500.00"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="montoRecibido" className="block text-sm font-semibold text-gray-900 mb-2">
+                  Monto Recibido
+                </label>
+                <input
+                  type="text"
+                  id="montoRecibido"
+                  value={montoRecibido}
+                  onChange={(e) => setMontoRecibido(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900"
+                  placeholder="Ej. 500.00"
+                  required
+                />
+              </div>
             </div>
           </form>
         </div>

@@ -20,16 +20,18 @@ const initialTransactions: Transaction[] = [
 
 interface ReconciliationDetailProps {
   clientName: string;
+  monthName: string;
+  reconciliationId: string;
   reconciliationName: string;
   onBack: () => void;
 }
 
-export function ReconciliationDetail({ clientName, reconciliationName, onBack }: ReconciliationDetailProps) {
-  const storageKey = `nats_conciliation_txns_${clientName}_${reconciliationName}`;
+export function ReconciliationDetail({ clientName, monthName, reconciliationId, reconciliationName, onBack }: ReconciliationDetailProps) {
+  const storageKey = `nats_conciliation_txns_${clientName}_${monthName}_${reconciliationId}`;
   
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem(storageKey);
-    return saved ? JSON.parse(saved) : initialTransactions;
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Save to localStorage whenever transactions change
@@ -43,6 +45,7 @@ export function ReconciliationDetail({ clientName, reconciliationName, onBack }:
     polizaPadre: string;
     polizaCobranza: string;
     numRecibo?: string;
+    montoEsperado?: string;
     monto?: string;
     type?: TransactionType;
     isEditing?: boolean;
@@ -70,24 +73,15 @@ export function ReconciliationDetail({ clientName, reconciliationName, onBack }:
   const handleCreateTransaction = (data: any) => {
     console.log('Handling transaction:', data);
     
-    // Clean and parse the amount
-    const rawMonto = data.monto.replace(/[$,]/g, '');
-    const amount = parseFloat(rawMonto);
+    // Clean and parse the amounts using the same logic as parseCurrency
+    const amountEsperado = parseCurrency(data.montoEsperado);
+    const amountRecibido = parseCurrency(data.monto);
     
-    if (isNaN(amount)) {
-      console.error('Invalid amount entered:', data.monto);
+    if (isNaN(amountEsperado) || isNaN(amountRecibido)) {
+      console.error('Invalid amount entered:', data.montoEsperado, data.monto);
       return;
     }
 
-    // For credit notes, we want the expected amount to be negative.
-    // If the user enters 500, it becomes -500. If they enter -500, it stays -500.
-    const montoEsperadoValue = data.type === 'nota_credito' 
-      ? (amount > 0 ? -amount : amount) 
-      : amount;
-    
-    // For polizas, monto matches montoEsperado. For credit notes, it's 0 as per requirements.
-    const montoValue = data.type === 'nota_credito' ? 0 : montoEsperadoValue;
-    
     if (selectedTransactionData?.isEditing && selectedTransactionData.id) {
       // Update existing transaction
       setTransactions(prev => prev.map(t => {
@@ -97,8 +91,8 @@ export function ReconciliationDetail({ clientName, reconciliationName, onBack }:
             polizaPadre: data.polizaPadre || '-',
             polizaCobranza: data.polizaCobranza || '-',
             numRecibo: data.numRecibo || t.numRecibo,
-            montoEsperado: formatCurrency(montoEsperadoValue),
-            monto: formatCurrency(montoValue),
+            montoEsperado: formatCurrency(amountEsperado),
+            monto: formatCurrency(amountRecibido),
           };
         }
         return t;
@@ -110,8 +104,8 @@ export function ReconciliationDetail({ clientName, reconciliationName, onBack }:
         polizaPadre: data.polizaPadre || '-',
         polizaCobranza: data.polizaCobranza || '-',
         numRecibo: data.numRecibo || (data.type === 'nota_credito' ? `NC-${Math.floor(Math.random() * 10000)}` : `REC-${Math.floor(Math.random() * 10000)}`),
-        montoEsperado: formatCurrency(montoEsperadoValue),
-        monto: formatCurrency(montoValue),
+        montoEsperado: formatCurrency(amountEsperado),
+        monto: formatCurrency(amountRecibido),
       };
 
       // Add to the beginning of the list so it's visible immediately
@@ -134,7 +128,8 @@ export function ReconciliationDetail({ clientName, reconciliationName, onBack }:
         polizaPadre: transaction.polizaPadre,
         polizaCobranza: transaction.polizaCobranza,
         numRecibo: transaction.numRecibo,
-        monto: transaction.monto !== '$0.00' ? transaction.monto : transaction.montoEsperado,
+        montoEsperado: transaction.montoEsperado,
+        monto: transaction.monto,
         type: type || (transaction.numRecibo.startsWith('NC') ? 'nota_credito' : 'poliza'),
         isEditing
       });
@@ -145,19 +140,46 @@ export function ReconciliationDetail({ clientName, reconciliationName, onBack }:
     setActiveDropdownId(null);
   };
 
+  const parseCurrency = (value: string | number) => {
+    if (typeof value === 'number') return value;
+    if (!value) return 0;
+    // Remove everything except numbers, dots, and minus signs
+    const cleanValue = value.replace(/[^-0-9.]/g, '');
+    const parsed = parseFloat(cleanValue);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   const totalRecibos = transactions.length;
 
   const montoEsperadoTotal = transactions.reduce((sum, txn) => {
-    const amount = parseFloat(txn.montoEsperado.replace(/[$,]/g, ''));
-    return sum + amount;
+    return sum + parseCurrency(txn.montoEsperado);
   }, 0);
 
   const montoRecibidoTotal = transactions.reduce((sum, txn) => {
-    const amount = parseFloat(txn.monto.replace(/[$,]/g, ''));
-    return sum + amount;
+    return sum + parseCurrency(txn.monto);
   }, 0);
 
   const diferenciaTotal = montoRecibidoTotal - montoEsperadoTotal;
+
+  // Force re-calculation of global state in localStorage for other components
+  useEffect(() => {
+    const monthlyKey = `nats_conciliation_monthly_${clientName}`;
+    const savedMonthly = localStorage.getItem(monthlyKey);
+    if (savedMonthly) {
+      const monthly = JSON.parse(savedMonthly);
+      const updatedMonthly = monthly.map((m: any) => {
+        if (m.mes === monthName) {
+          return {
+            ...m,
+            monto: formatCurrency(montoRecibidoTotal),
+            porcentaje: montoEsperadoTotal === 0 ? 100 : Math.round((montoRecibidoTotal / montoEsperadoTotal) * 100)
+          };
+        }
+        return m;
+      });
+      localStorage.setItem(monthlyKey, JSON.stringify(updatedMonthly));
+    }
+  }, [transactions, montoRecibidoTotal, montoEsperadoTotal, clientName, monthName]);
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -171,7 +193,7 @@ export function ReconciliationDetail({ clientName, reconciliationName, onBack }:
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">{clientName} · 03/02/2026</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">{clientName} · {reconciliationName}</h1>
             <p className="text-sm text-gray-500">{totalRecibos} recibos</p>
           </div>
         </div>

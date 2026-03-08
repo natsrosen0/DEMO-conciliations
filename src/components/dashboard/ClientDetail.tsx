@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Settings2, Plus, Loader2 } from 'lucide-react';
 import { ClientData } from './ClientTable';
 import { ReconciliationRulesModal } from './ReconciliationRulesModal';
@@ -10,10 +10,7 @@ interface ClientDetailProps {
   onBack: () => void;
 }
 
-const initialMonthlyData = [
-  { id: '1', mes: 'Febrero 2026', monto: '$144,274,682.74', porcentaje: 100, status: 'completed' },
-  { id: '2', mes: 'Enero 2026', monto: '$312,400.00', porcentaje: 72, status: 'completed' },
-];
+const initialMonthlyData: any[] = [];
 
 const ProgressBar = ({ percentage, status }: { percentage: number, status?: string }) => {
   const isComplete = percentage === 100;
@@ -46,10 +43,88 @@ const ProgressBar = ({ percentage, status }: { percentage: number, status?: stri
 };
 
 export function ClientDetail({ client, onBack }: ClientDetailProps) {
+  const storageKey = `nats_conciliation_monthly_${client.cliente}`;
+  
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false);
-  const [monthlyData, setMonthlyData] = useState(initialMonthlyData);
+  const [monthlyData, setMonthlyData] = useState<any[]>(() => {
+    const saved = localStorage.getItem(storageKey);
+    const data = saved ? JSON.parse(saved) : initialMonthlyData;
+    
+    // Update each item with real data from its own transaction storage
+    return data.map((item: any) => {
+      const reconciliationsKey = `nats_conciliation_reconciliations_${client.cliente}_${item.mes}`;
+      const savedReconciliations = localStorage.getItem(reconciliationsKey);
+      
+      let totalEsperado = 0;
+      let totalRecibido = 0;
+      const parseCurrency = (val: string) => parseFloat(val.replace(/[^-0-9.]/g, '')) || 0;
+
+      if (savedReconciliations) {
+        const reconciliations = JSON.parse(savedReconciliations);
+        reconciliations.forEach((recon: any) => {
+          const txnKey = `nats_conciliation_txns_${client.cliente}_${item.mes}_${recon.id}`;
+          const savedTxns = localStorage.getItem(txnKey);
+          if (savedTxns) {
+            const txns = JSON.parse(savedTxns);
+            totalEsperado += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.montoEsperado), 0);
+            totalRecibido += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.monto), 0);
+          }
+        });
+      }
+      
+      const percentage = totalEsperado === 0 ? 100 : Math.round((totalRecibido / totalEsperado) * 100);
+      
+      return {
+        ...item,
+        monto: new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalRecibido),
+        porcentaje: Math.min(100, Math.max(0, percentage)),
+        status: 'completed'
+      };
+    });
+  });
   const [selectedReconciliation, setSelectedReconciliation] = useState<any | null>(null);
+
+  // Save to localStorage whenever monthlyData changes
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(monthlyData));
+  }, [monthlyData, storageKey]);
+
+  // Re-calculate when coming back from detail view
+  useEffect(() => {
+    if (!selectedReconciliation) {
+      setMonthlyData(prev => prev.map(item => {
+        const reconciliationsKey = `nats_conciliation_reconciliations_${client.cliente}_${item.mes}`;
+        const savedReconciliations = localStorage.getItem(reconciliationsKey);
+        
+        let totalEsperado = 0;
+        let totalRecibido = 0;
+        const parseCurrency = (val: string) => parseFloat(val.replace(/[^-0-9.]/g, '')) || 0;
+
+        if (savedReconciliations) {
+          const reconciliations = JSON.parse(savedReconciliations);
+          reconciliations.forEach((recon: any) => {
+            const txnKey = `nats_conciliation_txns_${client.cliente}_${item.mes}_${recon.id}`;
+            const savedTxns = localStorage.getItem(txnKey);
+            if (savedTxns) {
+              const txns = JSON.parse(savedTxns);
+              totalEsperado += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.montoEsperado), 0);
+              totalRecibido += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.monto), 0);
+            }
+          });
+        }
+        
+        const percentage = totalEsperado === 0 ? 100 : Math.round((totalRecibido / totalEsperado) * 100);
+        
+        return {
+          ...item,
+          monto: new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalRecibido),
+          porcentaje: Math.min(100, Math.max(0, percentage)),
+          status: 'completed'
+        };
+      }));
+    }
+  }, [selectedReconciliation, client.cliente]);
 
   const handleCreateReconciliation = (name: string) => {
     const newReconciliation = {

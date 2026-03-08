@@ -12,21 +12,61 @@ import { ClientTable, ClientData } from './components/dashboard/ClientTable';
 import { AddClientPanel } from './components/dashboard/AddClientPanel';
 import { ClientDetail } from './components/dashboard/ClientDetail';
 
-const initialData: ClientData[] = [
-  { cliente: 'BIMBO', agente: 'Inter', transacciones: 20, porConciliar: '$30,000', porcentaje: 70 },
-  { cliente: 'Lear', agente: 'AON', transacciones: 72, porConciliar: '$27,987.45', porcentaje: 89 },
-  { cliente: 'CUPRUM', agente: 'Howden', transacciones: 65, porConciliar: '$13,789', porcentaje: 63 },
-  { cliente: 'UP', agente: 'Inter', transacciones: 53, porConciliar: '$0', porcentaje: 100 },
-  { cliente: 'Herdez', agente: 'AON', transacciones: 38, porConciliar: '$15,450', porcentaje: 78 },
-  { cliente: 'HOTELERA PALACE', agente: 'Howden', transacciones: 118, porConciliar: '$0', porcentaje: 100 },
-];
+const initialData: ClientData[] = [];
 
 const STORAGE_KEY = 'nats_conciliation_clients';
 
 export default function App() {
   const [clients, setClients] = useState<ClientData[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : initialData;
+    const data = saved ? JSON.parse(saved) : initialData;
+    
+    // Update each client with real data from their monthly reconciliations
+    return data.map((client: ClientData) => {
+      const monthlyKey = `nats_conciliation_monthly_${client.cliente}`;
+      const savedMonthly = localStorage.getItem(monthlyKey);
+      if (savedMonthly) {
+        const monthly = JSON.parse(savedMonthly);
+        const totalTransacciones = monthly.reduce((sum: number, m: any) => {
+          const txnKey = `nats_conciliation_txns_${client.cliente}_${m.mes}`;
+          const savedTxns = localStorage.getItem(txnKey);
+          return sum + (savedTxns ? JSON.parse(savedTxns).length : 0);
+        }, 0);
+        
+        const parseCurrency = (val: string) => parseFloat(val.replace(/[^-0-9.]/g, '')) || 0;
+        
+        let totalEsperadoGlobal = 0;
+        let totalRecibidoGlobal = 0;
+        
+        monthly.forEach((m: any) => {
+          const reconciliationsKey = `nats_conciliation_reconciliations_${client.cliente}_${m.mes}`;
+          const savedReconciliations = localStorage.getItem(reconciliationsKey);
+          if (savedReconciliations) {
+            const reconciliations = JSON.parse(savedReconciliations);
+            reconciliations.forEach((recon: any) => {
+              const txnKey = `nats_conciliation_txns_${client.cliente}_${m.mes}_${recon.id}`;
+              const savedTxns = localStorage.getItem(txnKey);
+              if (savedTxns) {
+                const txns = JSON.parse(savedTxns);
+                totalEsperadoGlobal += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.montoEsperado), 0);
+                totalRecibidoGlobal += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.monto), 0);
+              }
+            });
+          }
+        });
+        
+        const porConciliar = totalEsperadoGlobal - totalRecibidoGlobal;
+        const porcentaje = totalEsperadoGlobal === 0 ? 100 : Math.round((totalRecibidoGlobal / totalEsperadoGlobal) * 100);
+        
+        return {
+          ...client,
+          transacciones: totalTransacciones,
+          porConciliar: new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Math.max(0, porConciliar)),
+          porcentaje: Math.min(100, Math.max(0, porcentaje))
+        };
+      }
+      return client;
+    });
   });
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
@@ -35,6 +75,57 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
   }, [clients]);
+
+  // Re-calculate when coming back from client detail view
+  useEffect(() => {
+    if (!selectedClient) {
+      setClients(prev => prev.map(client => {
+        const monthlyKey = `nats_conciliation_monthly_${client.cliente}`;
+        const savedMonthly = localStorage.getItem(monthlyKey);
+        if (savedMonthly) {
+          const monthly = JSON.parse(savedMonthly);
+          const totalTransacciones = monthly.reduce((sum: number, m: any) => {
+            const txnKey = `nats_conciliation_txns_${client.cliente}_${m.mes}`;
+            const savedTxns = localStorage.getItem(txnKey);
+            return sum + (savedTxns ? JSON.parse(savedTxns).length : 0);
+          }, 0);
+          
+          const parseCurrency = (val: string) => parseFloat(val.replace(/[^-0-9.]/g, '')) || 0;
+          
+          let totalEsperadoGlobal = 0;
+          let totalRecibidoGlobal = 0;
+          
+          monthly.forEach((m: any) => {
+            const reconciliationsKey = `nats_conciliation_reconciliations_${client.cliente}_${m.mes}`;
+            const savedReconciliations = localStorage.getItem(reconciliationsKey);
+            if (savedReconciliations) {
+              const reconciliations = JSON.parse(savedReconciliations);
+              reconciliations.forEach((recon: any) => {
+                const txnKey = `nats_conciliation_txns_${client.cliente}_${m.mes}_${recon.id}`;
+                const savedTxns = localStorage.getItem(txnKey);
+                if (savedTxns) {
+                  const txns = JSON.parse(savedTxns);
+                  totalEsperadoGlobal += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.montoEsperado), 0);
+                  totalRecibidoGlobal += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.monto), 0);
+                }
+              });
+            }
+          });
+          
+          const porConciliar = totalEsperadoGlobal - totalRecibidoGlobal;
+          const porcentaje = totalEsperadoGlobal === 0 ? 100 : Math.round((totalRecibidoGlobal / totalEsperadoGlobal) * 100);
+          
+          return {
+            ...client,
+            transacciones: totalTransacciones,
+            porConciliar: new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Math.max(0, porConciliar)),
+            porcentaje: Math.min(100, Math.max(0, porcentaje))
+          };
+        }
+        return client;
+      }));
+    }
+  }, [selectedClient]);
 
   const handleAddClient = (newClient: { cliente: string; agente: string }) => {
     const clientData: ClientData = {
@@ -78,7 +169,7 @@ export default function App() {
                 </button>
               </div>
               
-              <SummaryCards />
+              <SummaryCards clients={clients} />
               <ClientTable 
                 data={clients} 
                 onRowClick={setSelectedClient}
