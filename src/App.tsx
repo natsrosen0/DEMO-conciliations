@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
@@ -21,10 +21,20 @@ const initialData: ClientData[] = [
   { cliente: 'HOTELERA PALACE', agente: 'Howden', transacciones: 118, porConciliar: '$0', porcentaje: 100 },
 ];
 
+const STORAGE_KEY = 'nats_conciliation_clients';
+
 export default function App() {
-  const [clients, setClients] = useState<ClientData[]>(initialData);
+  const [clients, setClients] = useState<ClientData[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : initialData;
+  });
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
+
+  // Save to localStorage whenever clients change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+  }, [clients]);
 
   const handleAddClient = (newClient: { cliente: string; agente: string }) => {
     const clientData: ClientData = {

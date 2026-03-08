@@ -25,7 +25,18 @@ interface ReconciliationDetailProps {
 }
 
 export function ReconciliationDetail({ clientName, reconciliationName, onBack }: ReconciliationDetailProps) {
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const storageKey = `nats_conciliation_txns_${clientName}_${reconciliationName}`;
+  
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const saved = localStorage.getItem(storageKey);
+    return saved ? JSON.parse(saved) : initialTransactions;
+  });
+
+  // Save to localStorage whenever transactions change
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(transactions));
+  }, [transactions, storageKey]);
+
   const [isCreditNotePanelOpen, setIsCreditNotePanelOpen] = useState(false);
   const [selectedTransactionData, setSelectedTransactionData] = useState<{
     id?: string;
