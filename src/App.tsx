@@ -38,9 +38,8 @@ export default function App() {
 
   const handleDeleteClient = (clienteName: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click
-    if (window.confirm(`¿Estás seguro de que deseas eliminar a ${clienteName}?`)) {
-      setClients((prev) => prev.filter((c) => c.cliente !== clienteName));
-    }
+    // Removed window.confirm to comply with iframe restrictions
+    setClients((prev) => prev.filter((c) => c.cliente !== clienteName));
   };
 
   return (
