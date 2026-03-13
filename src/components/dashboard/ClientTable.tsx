@@ -1,12 +1,45 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 
+export interface Responsible {
+  name: string;
+  email: string;
+}
+
+export interface Invoice {
+  id: string;
+  number: string;
+  status: 'paid' | 'pending' | 'error';
+  amount: string;
+}
+
+export interface PolizaCobranza {
+  id: string;
+  number: string;
+  invoices: Invoice[];
+}
+
+export interface PolizaPadre {
+  id: string;
+  number: string;
+  cobranzas: PolizaCobranza[];
+}
+
+export interface Subsidiary {
+  id: string;
+  name: string;
+  polizasPadre: PolizaPadre[];
+}
+
 export interface ClientData {
   cliente: string;
   agente: string;
   transacciones: number;
   porConciliar: string;
   porcentaje: number;
+  gnpResponsables?: Responsible[];
+  intermediarioResponsables?: Responsible[];
+  subsidiaries?: Subsidiary[];
 }
 
 const ProgressBar = ({ percentage }: { percentage: number }) => {

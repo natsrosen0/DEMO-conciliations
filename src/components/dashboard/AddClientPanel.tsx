@@ -1,22 +1,65 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus, Trash2 } from 'lucide-react';
+import { Responsible } from './ClientTable';
 
 export interface AddClientPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddClient: (client: { cliente: string; agente: string }) => void;
+  onAddClient: (client: { 
+    cliente: string; 
+    agente: string;
+    gnpResponsables: Responsible[];
+    intermediarioResponsables: Responsible[];
+  }) => void;
 }
 
 export function AddClientPanel({ isOpen, onClose, onAddClient }: AddClientPanelProps) {
   const [cliente, setCliente] = useState('');
   const [agente, setAgente] = useState('');
+  const [gnpResponsables, setGnpResponsables] = useState<Responsible[]>([{ name: '', email: '' }]);
+  const [intermediarioResponsables, setIntermediarioResponsables] = useState<Responsible[]>([{ name: '', email: '' }]);
+
+  const handleAddResponsible = (type: 'gnp' | 'intermediario') => {
+    if (type === 'gnp') {
+      setGnpResponsables([...gnpResponsables, { name: '', email: '' }]);
+    } else {
+      setIntermediarioResponsables([...intermediarioResponsables, { name: '', email: '' }]);
+    }
+  };
+
+  const handleRemoveResponsible = (type: 'gnp' | 'intermediario', index: number) => {
+    if (type === 'gnp') {
+      setGnpResponsables(gnpResponsables.filter((_, i) => i !== index));
+    } else {
+      setIntermediarioResponsables(intermediarioResponsables.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleUpdateResponsible = (type: 'gnp' | 'intermediario', index: number, field: keyof Responsible, value: string) => {
+    if (type === 'gnp') {
+      const updated = [...gnpResponsables];
+      updated[index][field] = value;
+      setGnpResponsables(updated);
+    } else {
+      const updated = [...intermediarioResponsables];
+      updated[index][field] = value;
+      setIntermediarioResponsables(updated);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (cliente.trim() && agente.trim()) {
-      onAddClient({ cliente: cliente.trim(), agente: agente.trim() });
+      onAddClient({ 
+        cliente: cliente.trim(), 
+        agente: agente.trim(),
+        gnpResponsables: gnpResponsables.filter(r => r.name.trim() || r.email.trim()),
+        intermediarioResponsables: intermediarioResponsables.filter(r => r.name.trim() || r.email.trim())
+      });
       setCliente('');
       setAgente('');
+      setGnpResponsables([{ name: '', email: '' }]);
+      setIntermediarioResponsables([{ name: '', email: '' }]);
       onClose();
     }
   };
@@ -32,7 +75,7 @@ export function AddClientPanel({ isOpen, onClose, onAddClient }: AddClientPanelP
       />
       
       {/* Side Panel */}
-      <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
+      <div className="fixed inset-y-0 right-0 w-full max-w-xl bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900">Agregar nuevo cliente</h2>
           <button 
@@ -44,35 +87,129 @@ export function AddClientPanel({ isOpen, onClose, onAddClient }: AddClientPanelP
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          <form id="add-client-form" onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre del cliente
-              </label>
-              <input
-                type="text"
-                id="cliente"
-                value={cliente}
-                onChange={(e) => setCliente(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none transition-shadow"
-                placeholder="Ej. Empresa S.A."
-                required
-              />
+          <form id="add-client-form" onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre del cliente
+                </label>
+                <input
+                  type="text"
+                  id="cliente"
+                  value={cliente}
+                  onChange={(e) => setCliente(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none transition-shadow"
+                  placeholder="Ej. Empresa S.A."
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="agente" className="block text-sm font-medium text-gray-700 mb-1">
+                  Agente asignado
+                </label>
+                <input
+                  type="text"
+                  id="agente"
+                  value={agente}
+                  onChange={(e) => setAgente(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none transition-shadow"
+                  placeholder="Ej. Inter"
+                  required
+                />
+              </div>
             </div>
 
+            {/* GNP Responsables */}
             <div>
-              <label htmlFor="agente" className="block text-sm font-medium text-gray-700 mb-1">
-                Agente asignado
-              </label>
-              <input
-                type="text"
-                id="agente"
-                value={agente}
-                onChange={(e) => setAgente(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none transition-shadow"
-                placeholder="Ej. Inter"
-                required
-              />
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Responsables GNP</h3>
+                <button
+                  type="button"
+                  onClick={() => handleAddResponsible('gnp')}
+                  className="text-[#6b21a8] hover:text-[#581c87] text-xs font-bold flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  Agregar responsable
+                </button>
+              </div>
+              <div className="space-y-3">
+                {gnpResponsables.map((resp, index) => (
+                  <div key={index} className="flex gap-3 items-start">
+                    <div className="flex-1 grid grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        value={resp.name}
+                        onChange={(e) => handleUpdateResponsible('gnp', index, 'name', e.target.value)}
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6b21a8] outline-none"
+                        placeholder="Nombre"
+                      />
+                      <input
+                        type="email"
+                        value={resp.email}
+                        onChange={(e) => handleUpdateResponsible('gnp', index, 'email', e.target.value)}
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6b21a8] outline-none"
+                        placeholder="Email"
+                      />
+                    </div>
+                    {gnpResponsables.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveResponsible('gnp', index)}
+                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Intermediario Responsables */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Responsables Intermediario</h3>
+                <button
+                  type="button"
+                  onClick={() => handleAddResponsible('intermediario')}
+                  className="text-[#6b21a8] hover:text-[#581c87] text-xs font-bold flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  Agregar responsable
+                </button>
+              </div>
+              <div className="space-y-3">
+                {intermediarioResponsables.map((resp, index) => (
+                  <div key={index} className="flex gap-3 items-start">
+                    <div className="flex-1 grid grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        value={resp.name}
+                        onChange={(e) => handleUpdateResponsible('intermediario', index, 'name', e.target.value)}
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6b21a8] outline-none"
+                        placeholder="Nombre"
+                      />
+                      <input
+                        type="email"
+                        value={resp.email}
+                        onChange={(e) => handleUpdateResponsible('intermediario', index, 'email', e.target.value)}
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6b21a8] outline-none"
+                        placeholder="Email"
+                      />
+                    </div>
+                    {intermediarioResponsables.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveResponsible('intermediario', index)}
+                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </form>
         </div>

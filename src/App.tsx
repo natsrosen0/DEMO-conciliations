@@ -8,7 +8,7 @@ import { Plus } from 'lucide-react';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { SummaryCards } from './components/dashboard/SummaryCards';
-import { ClientTable, ClientData } from './components/dashboard/ClientTable';
+import { ClientTable, ClientData, Responsible } from './components/dashboard/ClientTable';
 import { AddClientPanel } from './components/dashboard/AddClientPanel';
 import { ClientDetail } from './components/dashboard/ClientDetail';
 
@@ -127,7 +127,12 @@ export default function App() {
     }
   }, [selectedClient]);
 
-  const handleAddClient = (newClient: { cliente: string; agente: string }) => {
+  const handleAddClient = (newClient: { 
+    cliente: string; 
+    agente: string;
+    gnpResponsables: Responsible[];
+    intermediarioResponsables: Responsible[];
+  }) => {
     const clientData: ClientData = {
       ...newClient,
       transacciones: 0,
@@ -135,6 +140,11 @@ export default function App() {
       porcentaje: 0,
     };
     setClients((prev) => [clientData, ...prev]);
+  };
+
+  const handleUpdateClient = (updatedClient: ClientData) => {
+    setClients((prev) => prev.map(c => c.cliente === updatedClient.cliente ? updatedClient : c));
+    setSelectedClient(updatedClient);
   };
 
   const handleDeleteClient = (clienteName: string, e: React.MouseEvent) => {
@@ -155,6 +165,7 @@ export default function App() {
             <ClientDetail 
               client={selectedClient} 
               onBack={() => setSelectedClient(null)} 
+              onUpdateClient={handleUpdateClient}
             />
           ) : (
             <div className="max-w-7xl mx-auto">
