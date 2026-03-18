@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ClientData } from './ClientTable';
 import { PoliciesTableView } from './PoliciesTableView';
-import { Search, Building2, ChevronRight, Upload, Shield, Receipt, DollarSign } from 'lucide-react';
+import { Search, Building2, ChevronRight, Upload, Shield, Receipt, DollarSign, Trash2 } from 'lucide-react';
 import { PolicyStructureUploadPanel } from './PolicyStructureUploadPanel';
 
 interface PoliciesPageProps {
@@ -117,6 +117,15 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  const handleDeleteStructure = (e: React.MouseEvent, clientName: string) => {
+    e.stopPropagation();
+    if (window.confirm(`¿Estás seguro de que deseas eliminar la estructura de pólizas para ${clientName}?`)) {
+      const structureKey = `nats_conciliation_structure_${clientName}`;
+      localStorage.removeItem(structureKey);
+      setRefreshTrigger(prev => prev + 1);
+    }
+  };
+
   if (selectedClient) {
     return (
       <div className="relative h-full">
@@ -220,7 +229,14 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      <div className="flex justify-end">
+                      <div className="flex justify-end items-center gap-2">
+                        <button
+                          onClick={(e) => handleDeleteStructure(e, client.cliente)}
+                          className="p-2 rounded-lg bg-gray-50 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                          title="Eliminar Estructura"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                         <div className="p-2 rounded-lg bg-gray-50 text-gray-400 group-hover:text-[#6b21a8] group-hover:bg-purple-50 transition-all">
                           <ChevronRight className="w-4 h-4" />
                         </div>

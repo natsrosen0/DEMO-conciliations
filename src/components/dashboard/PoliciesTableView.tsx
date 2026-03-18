@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ArrowLeft, ChevronRight, FileText, Shield, Building2, Receipt, Home } from 'lucide-react';
+import { ArrowLeft, ChevronRight, FileText, Shield, Building2, Receipt, Home, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ClientData, Subsidiary, PolizaPadre, PolizaCobranza, Invoice } from './ClientTable';
 
@@ -382,20 +382,37 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
     );
   };
 
+  const handleDeleteStructure = () => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar la estructura de pólizas para ${client.cliente}?`)) {
+      const structureKey = `nats_conciliation_structure_${client.cliente}`;
+      localStorage.removeItem(structureKey);
+      onBack(); // Go back to the list as the data is now gone
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <button 
-          onClick={onBack}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Resumen de Pólizas</h1>
-          <p className="text-sm text-gray-500">{client.cliente}</p>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={onBack}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Resumen de Pólizas</h1>
+            <p className="text-sm text-gray-500">{client.cliente}</p>
+          </div>
         </div>
+        <button
+          onClick={handleDeleteStructure}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100"
+        >
+          <Trash2 className="w-4 h-4" />
+          Eliminar Estructura
+        </button>
       </div>
 
       {/* Summary Cards */}
