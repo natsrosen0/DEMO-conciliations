@@ -12,7 +12,7 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
   const [error, setError] = useState<string | null>(null);
 
   const downloadTemplate = () => {
-    const headers = ['Subsidiaria', 'Póliza Padre', 'Póliza de Cobranza', 'Recibo'];
+    const headers = ['Subsidiaria', 'Póliza Padre', 'Póliza de Cobranza', 'Recibo', 'Monto'];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -48,7 +48,8 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
           subsidiaria: columns[0]?.trim() || 'Subsidiaria Principal',
           polizaPadre: columns[1]?.trim() || '-',
           polizaCobranza: columns[2]?.trim() || '-',
-          recibo: columns[3]?.trim() || null
+          recibo: columns[3]?.trim() || null,
+          monto: columns[4]?.trim() || null
         };
       });
 
@@ -93,7 +94,7 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
               <p className="text-xs text-blue-800 leading-relaxed">
                 Copia las columnas de tu Excel en este orden: <br/>
-                <strong>Subsidiaria | Póliza Padre | Póliza de Cobranza | Recibo</strong>
+                <strong>Subsidiaria | Póliza Padre | Póliza de Cobranza | Recibo | Monto</strong>
               </p>
             </div>
 

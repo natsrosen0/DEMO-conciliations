@@ -47,7 +47,7 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
 
     // 3. Build the hierarchy map
     const subsMap: Record<string, Subsidiary> = {};
-    const reciboToHierarchy: Record<string, { sub: string, padre: string, cobranza: string }> = {};
+    const reciboToHierarchy: Record<string, { sub: string, padre: string, cobranza: string, monto?: string }> = {};
 
     // First, populate with uploaded structure
     uploadedStructure.forEach((item: any) => {
@@ -55,9 +55,10 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
       const padreNum = item.polizaPadre || '-';
       const cobranzaNum = item.polizaCobranza || '-';
       const reciboNum = item.recibo;
+      const monto = item.monto;
 
       if (reciboNum) {
-        reciboToHierarchy[reciboNum] = { sub: subName, padre: padreNum, cobranza: cobranzaNum };
+        reciboToHierarchy[reciboNum] = { sub: subName, padre: padreNum, cobranza: cobranzaNum, monto };
       }
 
       if (!subsMap[subName]) {
@@ -83,11 +84,16 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
       let padreNum = txn.polizaPadre || 'Sin Póliza Padre';
       let cobranzaNum = txn.polizaCobranza || 'Sin Póliza Cobranza';
       
+      let montoEsperadoStr = txn.montoEsperado;
+      
       const mapping = reciboToHierarchy[txn.numRecibo];
       if (mapping) {
         subName = mapping.sub;
         padreNum = mapping.padre;
         cobranzaNum = mapping.cobranza;
+        if (mapping.monto) {
+          montoEsperadoStr = mapping.monto;
+        }
       }
 
       // Find or create the hierarchy path
@@ -108,14 +114,14 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
       }
 
       const montoRecibido = parseCurrency(txn.monto);
-      const montoEsperado = parseCurrency(txn.montoEsperado);
+      const montoEsperado = parseCurrency(montoEsperadoStr);
       const isPaid = Math.abs(montoRecibido - montoEsperado) < 0.01 && montoEsperado > 0;
 
       cobranza.invoices.push({
         id: txn.id || Math.random().toString(36).substr(2, 9),
         number: txn.numRecibo || 'Sin Número',
         status: isPaid ? 'paid' : (montoRecibido > 0 ? 'error' : 'pending'),
-        amount: txn.montoEsperado
+        amount: montoEsperadoStr
       });
     });
 
