@@ -18,11 +18,15 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
 
   // Load data from localStorage
   const subsidiaries: Subsidiary[] = useMemo(() => {
+    // 1. Load uploaded structure
+    const structureKey = `nats_conciliation_structure_${client.cliente}`;
+    const structureStr = localStorage.getItem(structureKey);
+    const uploadedStructure = structureStr ? JSON.parse(structureStr) : [];
+
+    // 2. Load transactions
     const monthsKey = `nats_conciliation_monthly_${client.cliente}`;
     const monthsStr = localStorage.getItem(monthsKey);
-    if (!monthsStr) return [];
-
-    const months = JSON.parse(monthsStr);
+    const months = monthsStr ? JSON.parse(monthsStr) : [];
     const allTransactions: any[] = [];
 
     months.forEach((m: any) => {
@@ -41,31 +45,66 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
       }
     });
 
-    if (allTransactions.length === 0) return [];
+    // 3. Build the hierarchy map
+    const subsMap: Record<string, Subsidiary> = {};
+    const reciboToHierarchy: Record<string, { sub: string, padre: string, cobranza: string }> = {};
 
-    // Group by Poliza Padre -> Poliza Cobranza -> Invoice
-    const padresMap: Record<string, PolizaPadre> = {};
+    // First, populate with uploaded structure
+    uploadedStructure.forEach((item: any) => {
+      const subName = item.subsidiaria || 'Subsidiaria Principal';
+      const padreNum = item.polizaPadre || '-';
+      const cobranzaNum = item.polizaCobranza || '-';
+      const reciboNum = item.recibo;
 
-    allTransactions.forEach((txn: any) => {
-      const padreNum = txn.polizaPadre || 'Sin Póliza Padre';
-      const cobranzaNum = txn.polizaCobranza || 'Sin Póliza Cobranza';
-      
-      if (!padresMap[padreNum]) {
-        padresMap[padreNum] = {
-          id: `padre-${padreNum}`,
-          number: padreNum,
-          cobranzas: []
-        };
+      if (reciboNum) {
+        reciboToHierarchy[reciboNum] = { sub: subName, padre: padreNum, cobranza: cobranzaNum };
       }
 
-      let cobranza = padresMap[padreNum].cobranzas.find(c => c.number === cobranzaNum);
+      if (!subsMap[subName]) {
+        subsMap[subName] = { id: `sub-${subName}`, name: subName, polizasPadre: [] };
+      }
+
+      let padre = subsMap[subName].polizasPadre.find(p => p.number === padreNum);
+      if (!padre) {
+        padre = { id: `padre-${subName}-${padreNum}`, number: padreNum, cobranzas: [] };
+        subsMap[subName].polizasPadre.push(padre);
+      }
+
+      let cobranza = padre.cobranzas.find(c => c.number === cobranzaNum);
       if (!cobranza) {
-        cobranza = {
-          id: `cobranza-${padreNum}-${cobranzaNum}`,
-          number: cobranzaNum,
-          invoices: []
-        };
-        padresMap[padreNum].cobranzas.push(cobranza);
+        cobranza = { id: `cobranza-${subName}-${padreNum}-${cobranzaNum}`, number: cobranzaNum, invoices: [] };
+        padre.cobranzas.push(cobranza);
+      }
+    });
+
+    // Then, add transactions
+    allTransactions.forEach((txn: any) => {
+      let subName = 'Subsidiaria Principal';
+      let padreNum = txn.polizaPadre || 'Sin Póliza Padre';
+      let cobranzaNum = txn.polizaCobranza || 'Sin Póliza Cobranza';
+      
+      const mapping = reciboToHierarchy[txn.numRecibo];
+      if (mapping) {
+        subName = mapping.sub;
+        padreNum = mapping.padre;
+        cobranzaNum = mapping.cobranza;
+      }
+
+      // Find or create the hierarchy path
+      if (!subsMap[subName]) {
+        subsMap[subName] = { id: `sub-${subName}`, name: subName, polizasPadre: [] };
+      }
+
+      let padre = subsMap[subName].polizasPadre.find(p => p.number === padreNum);
+      if (!padre) {
+        padre = { id: `padre-${subName}-${padreNum}`, number: padreNum, cobranzas: [] };
+        subsMap[subName].polizasPadre.push(padre);
+      }
+
+      let cobranza = padre.cobranzas.find(c => c.number === cobranzaNum);
+      if (!cobranza) {
+        cobranza = { id: `cobranza-${subName}-${padreNum}-${cobranzaNum}`, number: cobranzaNum, invoices: [] };
+        padre.cobranzas.push(cobranza);
       }
 
       const montoRecibido = parseCurrency(txn.monto);
@@ -80,15 +119,7 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
       });
     });
 
-    // For now, we put all policies under a single "Principal" subsidiary 
-    // since the upload doesn't specify subsidiary yet.
-    return [
-      {
-        id: 'sub-principal',
-        name: 'Subsidiaria Principal',
-        polizasPadre: Object.values(padresMap)
-      }
-    ];
+    return Object.values(subsMap);
   }, [client.cliente]);
 
   const formatCurrency = (amount: number) => {

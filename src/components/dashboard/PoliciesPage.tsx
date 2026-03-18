@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ClientData } from './ClientTable';
 import { PoliciesTableView } from './PoliciesTableView';
-import { Search, Building2, ChevronRight } from 'lucide-react';
+import { Search, Building2, ChevronRight, Upload } from 'lucide-react';
+import { PolicyStructureUploadPanel } from './PolicyStructureUploadPanel';
 
 interface PoliciesPageProps {
   clients: ClientData[];
@@ -10,18 +11,45 @@ interface PoliciesPageProps {
 export function PoliciesPage({ clients }: PoliciesPageProps) {
   const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   const filteredClients = clients.filter(c => 
     c.cliente.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.agente.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleUploadStructure = (data: any[]) => {
+    if (!selectedClient) return;
+    const structureKey = `nats_conciliation_structure_${selectedClient.cliente}`;
+    localStorage.setItem(structureKey, JSON.stringify(data));
+    // Trigger a re-render by resetting the selected client briefly or just rely on the fact that we'll re-render when the panel closes
+    const temp = selectedClient;
+    setSelectedClient(null);
+    setTimeout(() => setSelectedClient(temp), 0);
+  };
+
   if (selectedClient) {
     return (
-      <PoliciesTableView 
-        client={selectedClient} 
-        onBack={() => setSelectedClient(null)} 
-      />
+      <div className="relative h-full">
+        <div className="absolute top-0 right-0 z-10 p-8">
+          <button 
+            onClick={() => setIsUploadOpen(true)}
+            className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            <Upload className="w-4 h-4" />
+            Cargar Estructura
+          </button>
+        </div>
+        <PoliciesTableView 
+          client={selectedClient} 
+          onBack={() => setSelectedClient(null)} 
+        />
+        <PolicyStructureUploadPanel
+          isOpen={isUploadOpen}
+          onClose={() => setIsUploadOpen(false)}
+          onUpload={handleUploadStructure}
+        />
+      </div>
     );
   }
 
