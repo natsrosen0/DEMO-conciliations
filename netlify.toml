@@ -1,8 +1,261 @@
-[build]
-  command = "npm run build"
-  publish = "dist"
+-- ============================================================
+-- Insurance Policy & Invoice Database Schema  v2
+-- For: Netlify DB (PostgreSQL via Neon)
+--
+-- Hierarchy (mapped from GRUPO BIMBO.xlsx + diagram):
+--
+--   pools            →  BIMBOX, BIMBO19, BIMBO-CO, BIMBO-E
+--   contractors      →  Individual insured entities (RFC + name)
+--   parent_policies  →  PolizaOriginal  ("Póliza Padre")
+--   policies         →  PolizaCobranza  ("Póliza")
+--   invoices         →  NumRecibo       ("Recibo")
+--   payments         →  Bank deposit applications (Aplicación sheet)
+-- ============================================================
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+
+-- ────────────────────────────────────────────────────────────
+-- 1. POOLS
+--    Top-level groupings: BIMBOX, BIMBO19, BIMBO-CO, BIMBO-E
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE pools (
+  id          SERIAL PRIMARY KEY,
+  code        VARCHAR(50)   UNIQUE NOT NULL,   -- e.g. "BIMBOX", "BIMBO19"
+  name        VARCHAR(255),
+  created_at  TIMESTAMP     DEFAULT NOW(),
+  updated_at  TIMESTAMP     DEFAULT NOW()
+);
+
+
+-- ────────────────────────────────────────────────────────────
+-- 2. CONTRACTORS  (Contratantes)
+--    Individual insured entities within a pool.
+--    RFC is the Mexican tax ID. The same RFC can appear
+--    under different legal names (use rfc + name as unique key).
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE contractors (
+  id          SERIAL PRIMARY KEY,
+  rfc         VARCHAR(20)   NOT NULL,          -- rfc_contratante
+  name        VARCHAR(255)  NOT NULL,          -- Contratante
+  created_at  TIMESTAMP     DEFAULT NOW(),
+  updated_at  TIMESTAMP     DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX idx_contractors_rfc_name ON contractors(rfc, name);
+
+
+-- ────────────────────────────────────────────────────────────
+-- 3. PARENT POLICIES  (Pólizas Padre = PolizaOriginal)
+--    One parent policy per pool/contractor combination.
+--    A parent policy can have many child policies.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE parent_policies (
+  id                SERIAL PRIMARY KEY,
+  pool_id           INTEGER       NOT NULL REFERENCES pools(id)        ON DELETE RESTRICT,
+  contractor_id     INTEGER       NOT NULL REFERENCES contractors(id)  ON DELETE RESTRICT,
+  policy_number     VARCHAR(50)   UNIQUE NOT NULL,   -- PolizaOriginal
+  coverage_type     VARCHAR(100),
+  insurer           VARCHAR(255),
+  start_date        DATE,
+  end_date          DATE,
+  status            VARCHAR(50)   DEFAULT 'active',  -- active | expired | cancelled
+  notes             TEXT,
+  created_at        TIMESTAMP     DEFAULT NOW(),
+  updated_at        TIMESTAMP     DEFAULT NOW()
+);
+
+CREATE INDEX idx_parent_policies_pool        ON parent_policies(pool_id);
+CREATE INDEX idx_parent_policies_contractor  ON parent_policies(contractor_id);
+
+
+-- ────────────────────────────────────────────────────────────
+-- 4. POLICIES  (Pólizas = PolizaCobranza)
+--    Child policies that belong to a Póliza Padre.
+--    Used for billing and collection tracking.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE policies (
+  id                SERIAL PRIMARY KEY,
+  parent_policy_id  INTEGER       NOT NULL REFERENCES parent_policies(id) ON DELETE CASCADE,
+  policy_number     VARCHAR(50)   UNIQUE NOT NULL,   -- PolizaCobranza
+  coverage_type     VARCHAR(100),
+  beneficiary       VARCHAR(255),
+  insured_amount    DECIMAL(15,2),
+  premium           DECIMAL(15,2),
+  start_date        DATE,
+  end_date          DATE,
+  status            VARCHAR(50)   DEFAULT 'active',  -- active | expired | cancelled | suspended
+  notes             TEXT,
+  created_at        TIMESTAMP     DEFAULT NOW(),
+  updated_at        TIMESTAMP     DEFAULT NOW()
+);
+
+CREATE INDEX idx_policies_parent  ON policies(parent_policy_id);
+
+
+-- ────────────────────────────────────────────────────────────
+-- 5. INVOICES / RECEIPTS  (Recibos = NumRecibo)
+--    One row per receipt per policy.
+--
+--    status values (from real data):
+--      POR EMITIR  → upcoming, not yet generated  (yellow in UI)
+--      EMITIDO     → issued, awaiting payment      (red in UI)
+--      PAGADO      → paid in full                  (green in UI)
+--
+--    Premium breakdown:
+--      prima_neta   = base premium before taxes
+--      prima_total  = prima_neta + taxes/fees
+--      *_emitida    = amount on the issued invoice
+--      *_pagada     = amount already collected
+--      *_pendiente  = outstanding balance
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE invoices (
+  id                    SERIAL PRIMARY KEY,
+  policy_id             INTEGER       NOT NULL REFERENCES policies(id) ON DELETE CASCADE,
+
+  -- Receipt identification
+  receipt_number        INTEGER       NOT NULL,             -- NumRecibo (1000, 5000 …)
+  endorsement           VARCHAR(20)   DEFAULT '000000',    -- Endoso
+
+  -- Coverage period for this specific receipt
+  coverage_start        DATE,                              -- VigenFecIniRecibo
+  coverage_end          DATE,                              -- VigenFecFinRecibo
+
+  -- Net premium (before taxes)
+  net_premium_issued    DECIMAL(15,2),                     -- PrimaNetaEmit
+  net_premium_paid      DECIMAL(15,2)  DEFAULT 0,          -- PrimaNetaPag
+  net_premium_pending   DECIMAL(15,2),                     -- PrimaNetaPend
+
+  -- Total premium (including taxes)
+  total_premium_issued  DECIMAL(15,2),                     -- PrimaTotalEmit
+  total_premium_paid    DECIMAL(15,2)  DEFAULT 0,          -- PrimaTotalPag
+  total_premium_pending DECIMAL(15,2),                     -- PrimaTotalPend
+
+  -- Dates
+  emission_date         DATE,                              -- FechaEmision
+  application_date      DATE,                              -- FechaAplicacion
+
+  -- Status & tax compliance
+  status                VARCHAR(20)   DEFAULT 'POR EMITIR', -- POR EMITIR | EMITIDO | PAGADO
+  fiscal_folio          VARCHAR(50),                        -- FOLIO_FISCAL (SAT)
+
+  created_at            TIMESTAMP     DEFAULT NOW(),
+  updated_at            TIMESTAMP     DEFAULT NOW(),
+
+  UNIQUE(policy_id, receipt_number, endorsement)
+);
+
+CREATE INDEX idx_invoices_policy    ON invoices(policy_id);
+CREATE INDEX idx_invoices_status    ON invoices(status);
+CREATE INDEX idx_invoices_coverage  ON invoices(coverage_start, coverage_end);
+CREATE INDEX idx_invoices_emission  ON invoices(emission_date);
+
+
+-- ────────────────────────────────────────────────────────────
+-- 6. PAYMENTS  (Aplicaciones de pago)
+--    Tracks actual bank deposits matched to invoices.
+--    Source: "Aplicación" and "Bimbox" sheets.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE payments (
+  id               SERIAL PRIMARY KEY,
+  invoice_id       INTEGER       REFERENCES invoices(id) ON DELETE SET NULL,
+  policy_number    VARCHAR(50),                   -- NO. POLIZA (denormalized for import)
+  receipt_number   INTEGER,                       -- Recibo
+  amount           DECIMAL(15,2) NOT NULL,        -- Importe
+  payment_date     DATE,                          -- FECHA
+  virtual_account  VARCHAR(50),                   -- CUENTA VIRTUAL
+  business_name    VARCHAR(255),                  -- NEGOCIO
+  total_deposited  DECIMAL(15,2),                 -- MONTO (total for that deposit batch)
+  notes            TEXT,                          -- Observaciones
+  created_at       TIMESTAMP     DEFAULT NOW()
+);
+
+CREATE INDEX idx_payments_invoice  ON payments(invoice_id);
+CREATE INDEX idx_payments_date     ON payments(payment_date);
+
+
+-- ────────────────────────────────────────────────────────────
+-- SAMPLE DATA  (from GRUPO BIMBO.xlsx)
+-- ────────────────────────────────────────────────────────────
+
+-- Pools
+INSERT INTO pools (code, name) VALUES
+  ('BIMBOX',   'Grupo Bimbo – Box'),
+  ('BIMBO19',  'Grupo Bimbo – 2019'),
+  ('BIMBO-CO', 'Grupo Bimbo – Corporativo'),
+  ('BIMBO-E',  'Grupo Bimbo – Especial');
+
+-- Contractors
+INSERT INTO contractors (rfc, name) VALUES
+  ('XAXX010101000', 'BIMBONET SERVICIOS SAPI DE C.V.'),
+  ('OOSY4211219N6', 'YOLANDA OROZCO SALAS'),
+  ('CBI 8201157A3', 'CORPORATIVO BIMBO, S.A. DE C.V.'),
+  ('RME 020521MV8', 'REFORESTAMOS MEXICO, A.C.'),
+  ('MEX 8607249M9', 'MOLDES Y EXHIBIDORES, S.A. DE C.V.'),
+  ('MDU 0604075U0', 'MUNDO DULCE, S.A. DE C.V.'),
+  ('GBI 810615RI8', 'GRUPO BIMBO S.A.B. DE C.V.'),
+  ('OESA7510046S8', 'ANDRES OBREGON SERVITJE');
+
+-- Parent Policy (PolizaOriginal 23525594, pool=BIMBOX, contractor=BIMBONET)
+INSERT INTO parent_policies (pool_id, contractor_id, policy_number, status)
+VALUES (1, 1, '23525594', 'active');
+
+-- Policy (PolizaCobranza 23484275, child of parent 23525594)
+INSERT INTO policies (parent_policy_id, policy_number, status)
+VALUES (1, '23484275', 'active');
+
+-- Invoices — EMITIDO (red) from "Estado de cuenta" sheet
+INSERT INTO invoices (
+  policy_id, receipt_number, endorsement,
+  coverage_start, coverage_end, total_premium_pending,
+  emission_date, application_date, status, fiscal_folio
+) VALUES
+  (1, 5000, '000000', '2025-12-01', '2026-01-01',  5082.86, '2025-10-18', '2025-10-18', 'EMITIDO',    'PL63362306'),
+  (1, 5001, '350003', '2025-12-01', '2026-01-01',  -912.74, '2025-11-26', '2025-11-26', 'EMITIDO',    'NL10675273'),
+  (1, 6000, '000000', '2026-01-01', '2026-02-01',  5082.86, '2025-11-18', '2025-11-18', 'EMITIDO',    'PL63472345'),
+  (1, 7000, '000000', '2026-02-01', '2026-03-01',  5082.86, NULL,          NULL,         'POR EMITIR', NULL),
+  (1, 8000, '000000', '2026-03-01', '2026-04-01',  5082.86, NULL,          NULL,         'POR EMITIR', NULL);
+
+-- Invoice — PAGADO (green) from "Pagado" sheet
+INSERT INTO invoices (
+  policy_id, receipt_number, endorsement,
+  coverage_start, coverage_end,
+  net_premium_issued, net_premium_paid, net_premium_pending,
+  total_premium_issued, total_premium_paid, total_premium_pending,
+  emission_date, application_date, status, fiscal_folio
+) VALUES
+  (1, 1000, '000000', '2025-08-01', '2025-09-01',
+   4381.82, 4381.82, 0, 5082.97, 5082.97, 0,
+   '2025-07-30', '2025-10-27', 'PAGADO', 'PL62999124');
+
+
+-- ────────────────────────────────────────────────────────────
+-- USEFUL QUERIES
+-- ────────────────────────────────────────────────────────────
+
+-- Full dashboard view — hierarchy with receipt counts per status:
+-- SELECT
+--   po.code                                                      AS pool,
+--   c.name                                                       AS contractor,
+--   pp.policy_number                                             AS poliza_padre,
+--   p.policy_number                                              AS poliza,
+--   COUNT(i.id)                                                  AS total_recibos,
+--   SUM(CASE WHEN i.status='PAGADO'     THEN 1 ELSE 0 END)       AS pagados,
+--   SUM(CASE WHEN i.status='EMITIDO'    THEN 1 ELSE 0 END)       AS emitidos,
+--   SUM(CASE WHEN i.status='POR EMITIR' THEN 1 ELSE 0 END)       AS por_emitir,
+--   SUM(i.total_premium_pending)                                 AS total_pendiente
+-- FROM pools po
+-- JOIN parent_policies pp  ON pp.pool_id = po.id
+-- JOIN contractors c       ON c.id = pp.contractor_id
+-- JOIN policies p          ON p.parent_policy_id = pp.id
+-- LEFT JOIN invoices i     ON i.policy_id = p.id
+-- GROUP BY po.code, c.name, pp.policy_number, p.policy_number
+-- ORDER BY po.code, c.name;
+
+-- All EMITIDO (red) receipts with outstanding balance:
+-- SELECT c.name, pp.policy_number AS poliza_padre, p.policy_number AS poliza,
+--        i.receipt_number, i.total_premium_pending, i.coverage_end
+-- FROM invoices i
+-- JOIN policies p          ON p.id = i.policy_id
+-- JOIN parent_policies pp  ON pp.id = p.parent_policy_id
+-- JOIN contractors c       ON c.id = pp.contractor_id
+-- WHERE i.status = 'EMITIDO'
+-- ORDER BY i.coverage_end;
