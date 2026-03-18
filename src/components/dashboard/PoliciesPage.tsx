@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ClientData } from './ClientTable';
 import { PoliciesTableView } from './PoliciesTableView';
-import { Search, Building2, ChevronRight, Upload } from 'lucide-react';
+import { Search, Building2, ChevronRight, Upload, Shield, Receipt, DollarSign } from 'lucide-react';
 import { PolicyStructureUploadPanel } from './PolicyStructureUploadPanel';
 
 interface PoliciesPageProps {
@@ -12,8 +12,100 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
   const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const filteredClients = clients.filter(c => 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+    }).format(amount);
+  };
+
+  const parseCurrency = (val: string | number) => {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    return parseFloat(val.toString().replace(/[^-0-9.]/g, '')) || 0;
+  };
+
+  const getClientMetrics = (clientName: string) => {
+    // 1. Load uploaded structure
+    const structureKey = `nats_conciliation_structure_${clientName}`;
+    const structureStr = localStorage.getItem(structureKey);
+    const uploadedStructure = structureStr ? JSON.parse(structureStr) : [];
+
+    // 2. Load transactions
+    const monthsKey = `nats_conciliation_monthly_${clientName}`;
+    const monthsStr = localStorage.getItem(monthsKey);
+    const months = monthsStr ? JSON.parse(monthsStr) : [];
+    
+    let totalExpected = 0;
+    let totalPaid = 0;
+    const padreNumbers = new Set<string>();
+
+    // Add from structure (unique padres)
+    uploadedStructure.forEach((item: any) => {
+      if (item.polizaPadre && item.polizaPadre !== '-') {
+        padreNumbers.add(item.polizaPadre);
+      }
+    });
+
+    // Map to track overrides from structure
+    const reciboToMonto: Record<string, number> = {};
+    uploadedStructure.forEach((item: any) => {
+      if (item.recibo && item.monto) {
+        reciboToMonto[item.recibo] = parseCurrency(item.monto);
+      }
+    });
+
+    // Process all transactions
+    months.forEach((m: any) => {
+      const reconKey = `nats_conciliation_reconciliations_${clientName}_${m.mes}`;
+      const reconStr = localStorage.getItem(reconKey);
+      if (reconStr) {
+        const recons = JSON.parse(reconStr);
+        recons.forEach((r: any) => {
+          const txnKey = `nats_conciliation_txns_${clientName}_${m.mes}_${r.id}`;
+          const txnStr = localStorage.getItem(txnKey);
+          if (txnStr) {
+            const txns = JSON.parse(txnStr);
+            txns.forEach((txn: any) => {
+              if (txn.polizaPadre && txn.polizaPadre !== 'Sin Póliza Padre') {
+                padreNumbers.add(txn.polizaPadre);
+              }
+
+              const montoRecibido = parseCurrency(txn.monto);
+              let montoEsperado = parseCurrency(txn.montoEsperado);
+              
+              // Apply override if exists
+              if (txn.numRecibo && reciboToMonto[txn.numRecibo] !== undefined) {
+                montoEsperado = reciboToMonto[txn.numRecibo];
+              }
+
+              totalExpected += montoEsperado;
+              if (Math.abs(montoRecibido - montoEsperado) < 0.01 && montoEsperado > 0) {
+                totalPaid += montoRecibido;
+              }
+            });
+          }
+        });
+      }
+    });
+
+    return {
+      numPadres: padreNumbers.size,
+      totalPaid,
+      totalExpected
+    };
+  };
+
+  const clientsWithMetrics = useMemo(() => {
+    return clients.map(client => ({
+      ...client,
+      metrics: getClientMetrics(client.cliente)
+    }));
+  }, [clients, refreshTrigger]);
+
+  const filteredClients = clientsWithMetrics.filter(c => 
     c.cliente.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.agente.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -22,10 +114,7 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
     if (!selectedClient) return;
     const structureKey = `nats_conciliation_structure_${selectedClient.cliente}`;
     localStorage.setItem(structureKey, JSON.stringify(data));
-    // Trigger a re-render by resetting the selected client briefly or just rely on the fact that we'll re-render when the panel closes
-    const temp = selectedClient;
-    setSelectedClient(null);
-    setTimeout(() => setSelectedClient(temp), 0);
+    setRefreshTrigger(prev => prev + 1);
   };
 
   if (selectedClient) {
@@ -57,7 +146,7 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Estructura de Pólizas</h1>
-        <p className="text-sm text-gray-500 mt-1">Selecciona un cliente para ver su estructura de pólizas y estados de conciliación.</p>
+        <p className="text-sm text-gray-500 mt-1">Resumen de jerarquías y estados de conciliación por contratante.</p>
       </div>
 
       {/* Search */}
@@ -65,39 +154,79 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Buscar cliente o agente..."
+          placeholder="Buscar contratante..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow shadow-sm"
         />
       </div>
 
-      {/* Client Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredClients.map((client) => (
-          <button
-            key={client.cliente}
-            onClick={() => setSelectedClient(client)}
-            className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-[#6b21a8]/50 hover:shadow-md transition-all text-left group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-[#6b21a8] group-hover:bg-[#6b21a8] group-hover:text-white transition-colors">
-                <Building2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-900">{client.cliente}</h3>
-                <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{client.agente}</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#6b21a8] transition-colors" />
-          </button>
-        ))}
+      {/* Client Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50/50">
+                <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider">Contratante</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider text-center">Pólizas Padre</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider">Total Pagado</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider">Valor Total</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredClients.map((client) => (
+                <tr 
+                  key={client.cliente}
+                  className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                  onClick={() => setSelectedClient(client)}
+                >
+                  <td className="py-4 px-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-[#6b21a8] group-hover:bg-[#6b21a8] group-hover:text-white transition-colors">
+                        <Building2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-gray-900">{client.cliente}</div>
+                        <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{client.agente}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-bold">
+                      {client.metrics.numPadres}
+                    </div>
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="flex items-center gap-1.5 text-sm font-bold text-green-600">
+                      {formatCurrency(client.metrics.totalPaid)}
+                    </div>
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="text-sm font-bold text-gray-900">
+                      {formatCurrency(client.metrics.totalExpected)}
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 text-right">
+                    <div className="flex justify-end">
+                      <div className="p-2 rounded-lg bg-gray-50 text-gray-400 group-hover:text-[#6b21a8] group-hover:bg-purple-50 transition-all">
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
 
-        {filteredClients.length === 0 && (
-          <div className="col-span-full py-12 text-center border-2 border-dashed border-gray-100 rounded-2xl">
-            <p className="text-sm text-gray-400 italic">No se encontraron clientes</p>
-          </div>
-        )}
+              {filteredClients.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center">
+                    <p className="text-sm text-gray-400 italic">No se encontraron contratantes</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

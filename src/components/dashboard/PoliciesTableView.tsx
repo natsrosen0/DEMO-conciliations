@@ -170,7 +170,7 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
     const remaining = total - reconciled;
     const percentage = total === 0 ? 100 : Math.round((reconciled / total) * 100);
 
-    return { total, remaining, percentage };
+    return { total, reconciled, remaining, percentage };
   };
 
   const globalTotals = useMemo(() => calculateTotals(subsidiaries, 'subsidiaries'), [subsidiaries]);
@@ -244,29 +244,51 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
     let data: any[] = [];
     let title = "";
     let icon: any = null;
+    let childLabel = "";
 
     if (currentLevel === 'subsidiaries') {
-      data = subsidiaries.map(s => ({ ...s, ...calculateTotals([s], 'subsidiaries'), label: s.name }));
+      data = subsidiaries.map(s => ({ 
+        ...s, 
+        ...calculateTotals([s], 'subsidiaries'), 
+        label: s.name,
+        childCount: s.polizasPadre.length 
+      }));
       title = "Subsidiarias";
       icon = <Building2 className="w-4 h-4" />;
+      childLabel = "Pólizas Padre";
     } else if (currentLevel === 'padres' && selectedSubsidiary) {
-      data = selectedSubsidiary.polizasPadre.map(p => ({ ...p, ...calculateTotals([p], 'padres'), label: p.number }));
+      data = selectedSubsidiary.polizasPadre.map(p => ({ 
+        ...p, 
+        ...calculateTotals([p], 'padres'), 
+        label: p.number,
+        childCount: p.cobranzas.length
+      }));
       title = "Pólizas Padre";
       icon = <Shield className="w-4 h-4" />;
+      childLabel = "Pólizas Cobranza";
     } else if (currentLevel === 'cobranzas' && selectedPadre) {
-      data = selectedPadre.cobranzas.map(c => ({ ...c, ...calculateTotals([c], 'cobranzas'), label: c.number }));
+      data = selectedPadre.cobranzas.map(c => ({ 
+        ...c, 
+        ...calculateTotals([c], 'cobranzas'), 
+        label: c.number,
+        childCount: c.invoices.length
+      }));
       title = "Pólizas de Cobranza";
       icon = <FileText className="w-4 h-4" />;
+      childLabel = "Recibos";
     } else if (currentLevel === 'invoices' && selectedCobranza) {
       data = selectedCobranza.invoices.map(i => ({ 
         ...i, 
         total: parseCurrency(i.amount), 
+        reconciled: i.status === 'paid' ? parseCurrency(i.amount) : 0,
         remaining: i.status === 'paid' ? 0 : parseCurrency(i.amount),
         percentage: i.status === 'paid' ? 100 : 0,
-        label: i.number 
+        label: i.number,
+        childCount: 0
       }));
       title = "Recibos (Facturas)";
       icon = <Receipt className="w-4 h-4" />;
+      childLabel = "-";
     }
 
     return (
@@ -287,8 +309,11 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="py-3 px-4 text-xs font-semibold text-gray-900">Nombre / Número</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-900">Monto Total</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-900">Por Conciliar</th>
+                {currentLevel !== 'invoices' && (
+                  <th className="py-3 px-4 text-xs font-semibold text-gray-900 text-center">{childLabel}</th>
+                )}
+                <th className="py-3 px-4 text-xs font-semibold text-gray-900">Total Pagado</th>
+                <th className="py-3 px-4 text-xs font-semibold text-gray-900">Valor Total</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-900">% Conciliado</th>
               </tr>
             </thead>
@@ -317,12 +342,19 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
                         {currentLevel !== 'invoices' && <ChevronRight className="w-3 h-3 text-gray-300" />}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-xs text-gray-900">{formatCurrency(item.total)}</td>
+                    {currentLevel !== 'invoices' && (
+                      <td className="py-3 px-4 text-center">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold">
+                          {item.childCount}
+                        </span>
+                      </td>
+                    )}
                     <td className="py-3 px-4">
-                      <span className={`text-xs font-medium ${item.remaining > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {formatCurrency(item.remaining)}
+                      <span className="text-xs font-bold text-green-600">
+                        {formatCurrency(item.reconciled)}
                       </span>
                     </td>
+                    <td className="py-3 px-4 text-xs font-bold text-gray-900">{formatCurrency(item.total)}</td>
                     <td className="py-3 px-4">
                       <ProgressBar percentage={item.percentage} />
                     </td>
@@ -330,7 +362,7 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-xs text-gray-400 italic">No hay datos disponibles</td>
+                  <td colSpan={5} className="py-8 text-center text-xs text-gray-400 italic">No hay datos disponibles</td>
                 </tr>
               )}
             </tbody>
@@ -359,24 +391,24 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <h3 className="text-xs font-medium text-gray-500 mb-1">Monto Total Pólizas</h3>
+          <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Valor Total</h3>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-gray-900">{formatCurrency(globalTotals.total)}</span>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 rounded-full bg-red-500"></div>
-            <h3 className="text-xs font-medium text-gray-500">Total por Conciliar</h3>
+            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Pagado</h3>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-gray-900 text-red-600">{formatCurrency(globalTotals.remaining)}</span>
+            <span className="text-2xl font-bold text-green-600">{formatCurrency(globalTotals.reconciled)}</span>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <div className={`w-2 h-2 rounded-full ${globalTotals.percentage === 100 ? 'bg-green-500' : 'bg-[#6b21a8]'}`}></div>
-            <h3 className="text-xs font-medium text-gray-500">% Conciliación Global</h3>
+            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">% Conciliación Global</h3>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-gray-900">{globalTotals.percentage}%</span>
