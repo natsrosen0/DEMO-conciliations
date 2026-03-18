@@ -171,51 +171,64 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
                 <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider text-center">Pólizas Padre</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider">Total Pagado</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider">Valor Total</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider">Estado</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredClients.map((client) => (
-                <tr 
-                  key={client.cliente}
-                  className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors group cursor-pointer"
-                  onClick={() => setSelectedClient(client)}
-                >
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-[#6b21a8] group-hover:bg-[#6b21a8] group-hover:text-white transition-colors">
-                        <Building2 className="w-4 h-4" />
+              {filteredClients.map((client) => {
+                const percentage = client.metrics.totalExpected === 0 ? 100 : Math.round((client.metrics.totalPaid / client.metrics.totalExpected) * 100);
+                return (
+                  <tr 
+                    key={client.cliente}
+                    className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                    onClick={() => setSelectedClient(client)}
+                  >
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-[#6b21a8] group-hover:bg-[#6b21a8] group-hover:text-white transition-colors">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-900">{client.cliente}</div>
+                          <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{client.agente}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-sm font-bold text-gray-900">{client.cliente}</div>
-                        <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{client.agente}</div>
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-bold">
+                        {client.metrics.numPadres}
                       </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 text-center">
-                    <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-bold">
-                      {client.metrics.numPadres}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-1.5 text-sm font-bold text-green-600">
-                      {formatCurrency(client.metrics.totalPaid)}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="text-sm font-bold text-gray-900">
-                      {formatCurrency(client.metrics.totalExpected)}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <div className="flex justify-end">
-                      <div className="p-2 rounded-lg bg-gray-50 text-gray-400 group-hover:text-[#6b21a8] group-hover:bg-purple-50 transition-all">
-                        <ChevronRight className="w-4 h-4" />
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-1.5 text-sm font-bold text-green-600">
+                        {formatCurrency(client.metrics.totalPaid)}
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="text-sm font-bold text-gray-900">
+                        {formatCurrency(client.metrics.totalExpected)}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        percentage === 100 
+                          ? 'bg-green-50 text-green-700 border border-green-100' 
+                          : 'bg-amber-50 text-amber-700 border border-amber-100'
+                      }`}>
+                        {percentage === 100 ? 'Emitido' : 'POR EMITIR'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-right">
+                      <div className="flex justify-end">
+                        <div className="p-2 rounded-lg bg-gray-50 text-gray-400 group-hover:text-[#6b21a8] group-hover:bg-purple-50 transition-all">
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
 
               {filteredClients.length === 0 && (
                 <tr>

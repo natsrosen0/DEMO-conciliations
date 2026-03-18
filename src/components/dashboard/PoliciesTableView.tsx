@@ -314,6 +314,7 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
                 )}
                 <th className="py-3 px-4 text-xs font-semibold text-gray-900">Total Pagado</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-900">Valor Total</th>
+                <th className="py-3 px-4 text-xs font-semibold text-gray-900">Estado</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-900">% Conciliado</th>
               </tr>
             </thead>
@@ -355,6 +356,15 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-xs font-bold text-gray-900">{formatCurrency(item.total)}</td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        item.percentage === 100 
+                          ? 'bg-green-50 text-green-700 border border-green-100' 
+                          : 'bg-amber-50 text-amber-700 border border-amber-100'
+                      }`}>
+                        {item.percentage === 100 ? 'Emitido' : 'POR EMITIR'}
+                      </span>
+                    </td>
                     <td className="py-3 px-4">
                       <ProgressBar percentage={item.percentage} />
                     </td>
