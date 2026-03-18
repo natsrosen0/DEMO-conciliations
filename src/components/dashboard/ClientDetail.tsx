@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Settings2, Plus, Loader2, User, Mail, Pencil, Check, X, Trash2, FileText } from 'lucide-react';
+import { ArrowLeft, Settings2, Plus, Loader2, User, Mail, Pencil, Check, X, Trash2 } from 'lucide-react';
 import { ClientData, Responsible } from './ClientTable';
 import { ReconciliationRulesModal } from './ReconciliationRulesModal';
 import { CreateReconciliationPanel } from './CreateReconciliationPanel';
 import { MonthlyTransactionsView } from './MonthlyTransactionsView';
-import { PoliciesTableView } from './PoliciesTableView';
 
 interface ClientDetailProps {
   client: ClientData;
@@ -137,7 +136,6 @@ export function ClientDetail({ client, onBack, onUpdateClient }: ClientDetailPro
     });
   });
   const [selectedReconciliation, setSelectedReconciliation] = useState<any | null>(null);
-  const [showPolicies, setShowPolicies] = useState(false);
 
   // Save to localStorage whenever monthlyData changes
   useEffect(() => {
@@ -213,15 +211,6 @@ export function ClientDetail({ client, onBack, onUpdateClient }: ClientDetailPro
     );
   }
 
-  if (showPolicies) {
-    return (
-      <PoliciesTableView 
-        client={client}
-        onBack={() => setShowPolicies(false)}
-      />
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
@@ -240,13 +229,6 @@ export function ClientDetail({ client, onBack, onUpdateClient }: ClientDetailPro
         </div>
         
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setShowPolicies(true)}
-            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
-          >
-            <FileText className="w-4 h-4 text-blue-500" />
-            Ver Pólizas
-          </button>
           <button 
             onClick={() => setIsRulesModalOpen(true)}
             className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"

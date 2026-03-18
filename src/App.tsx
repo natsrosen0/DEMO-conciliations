@@ -11,6 +11,7 @@ import { SummaryCards } from './components/dashboard/SummaryCards';
 import { ClientTable, ClientData, Responsible } from './components/dashboard/ClientTable';
 import { AddClientPanel } from './components/dashboard/AddClientPanel';
 import { ClientDetail } from './components/dashboard/ClientDetail';
+import { PoliciesPage } from './components/dashboard/PoliciesPage';
 
 const initialData: ClientData[] = [];
 
@@ -70,6 +71,7 @@ export default function App() {
   });
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
+  const [currentView, setCurrentView] = useState('dashboard');
 
   // Save to localStorage whenever clients change
   useEffect(() => {
@@ -155,13 +157,18 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#fafafa] font-sans text-gray-900 overflow-hidden">
-      <Sidebar />
+      <Sidebar currentView={currentView} onViewChange={(view) => {
+        setCurrentView(view);
+        setSelectedClient(null);
+      }} />
       
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <Header />
         
         <main className="flex-1 overflow-y-auto p-8 relative">
-          {selectedClient ? (
+          {currentView === 'policies' ? (
+            <PoliciesPage clients={clients} />
+          ) : selectedClient ? (
             <ClientDetail 
               client={selectedClient} 
               onBack={() => setSelectedClient(null)} 
