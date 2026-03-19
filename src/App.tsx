@@ -35,9 +35,27 @@ export default function App() {
         
         const parseCurrency = (val: string) => parseFloat(val.replace(/[^-0-9.]/g, '')) || 0;
         
+        const structureKey = `nats_conciliation_structure_${client.cliente}`;
+        const savedStructure = localStorage.getItem(structureKey);
+        const uploadedStructure = savedStructure ? JSON.parse(savedStructure) : [];
+        
+        const reciboToMonto: Record<string, number> = {};
+        const reciboToEstado: Record<string, string> = {};
+        uploadedStructure.forEach((item: any) => {
+          if (item.recibo) {
+            if (item.monto) reciboToMonto[item.recibo] = parseCurrency(item.monto);
+            if (item.estado) reciboToEstado[item.recibo] = item.estado;
+          }
+        });
+
+        const processedRecibos = new Set<string>();
+        
         let totalEsperadoGlobal = 0;
         let totalRecibidoGlobal = 0;
         let totalConciliadoGlobal = 0;
+        let hasOrderError = false;
+
+        const cobranzaInvoices: Record<string, { number: string, isPaid: boolean }[]> = {};
         
         monthly.forEach((m: any) => {
           const reconciliationsKey = `nats_conciliation_reconciliations_${client.cliente}_${m.mes}`;
@@ -50,28 +68,72 @@ export default function App() {
               if (savedTxns) {
                 const txns = JSON.parse(savedTxns);
                 txns.forEach((t: any) => {
-                  const amt = parseCurrency(t.montoEsperado);
+                  let amt = parseCurrency(t.montoEsperado);
                   const received = parseCurrency(t.monto);
-                  const isEmitido = !!(t.estado && t.estado.toLowerCase().includes('emitido'));
+                  
+                  const mappingEstado = t.numRecibo ? reciboToEstado[t.numRecibo] : null;
+                  const isEmitido = !!((t.estado || mappingEstado) && (t.estado || mappingEstado).toLowerCase().includes('emitido'));
+                  
+                  if (t.numRecibo && reciboToMonto[t.numRecibo] !== undefined) {
+                    amt = reciboToMonto[t.numRecibo];
+                    processedRecibos.add(t.numRecibo);
+                  }
                   
                   totalEsperadoGlobal += amt;
                   totalRecibidoGlobal += received;
                   totalConciliadoGlobal += isEmitido ? amt : 0;
+
+                  const cobKey = (t.polizaCobranza || '-').trim();
+                  if (!cobranzaInvoices[cobKey]) cobranzaInvoices[cobKey] = [];
+                  cobranzaInvoices[cobKey].push({ number: t.numRecibo || '', isPaid: isEmitido });
                 });
               }
             });
           }
         });
+
+        // Add expected amounts from structure for receipts that don't have transactions yet
+        uploadedStructure.forEach((item: any) => {
+          if (item.recibo && !processedRecibos.has(item.recibo) && item.monto) {
+            const amt = parseCurrency(item.monto);
+            totalEsperadoGlobal += amt;
+            const isEmitido = item.estado && item.estado.toLowerCase().includes('emitido');
+            if (isEmitido) {
+              totalConciliadoGlobal += amt;
+            }
+            const cobKey = (item.polizaCobranza || '-').trim();
+            if (!cobranzaInvoices[cobKey]) cobranzaInvoices[cobKey] = [];
+            cobranzaInvoices[cobKey].push({ number: item.recibo || '', isPaid: !!isEmitido });
+          }
+        });
+
+        // Check order
+        Object.values(cobranzaInvoices).forEach(invoices => {
+          invoices.sort((a, b) => {
+            const numA = parseInt(a.number.replace(/\D/g, '')) || 0;
+            const numB = parseInt(b.number.replace(/\D/g, '')) || 0;
+            return numA - numB;
+          });
+          let foundUnpaid = false;
+          invoices.forEach(inv => {
+            if (inv.isPaid && foundUnpaid) hasOrderError = true;
+            if (!inv.isPaid) foundUnpaid = true;
+          });
+        });
         
         const porConciliar = totalEsperadoGlobal - totalConciliadoGlobal;
         const porcentaje = totalEsperadoGlobal === 0 ? 100 : Math.round((totalConciliadoGlobal / totalEsperadoGlobal) * 100);
         
+        const currencyFormatter = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+        
         return {
           ...client,
           transacciones: totalTransacciones,
-          porConciliar: new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Math.max(0, porConciliar)),
+          totalPagado: currencyFormatter.format(totalConciliadoGlobal),
+          porConciliar: currencyFormatter.format(Math.max(0, porConciliar)),
           porcentaje: Math.min(100, Math.max(0, porcentaje)),
-          porcentajePago: Math.min(100, Math.max(0, porcentaje))
+          porcentajePago: Math.min(100, Math.max(0, porcentaje)),
+          hasOrderError
         };
       }
       return client;
@@ -120,6 +182,9 @@ export default function App() {
           let totalEsperadoGlobal = 0;
           let totalRecibidoGlobal = 0;
           let totalConciliadoGlobal = 0;
+          let hasOrderError = false;
+
+          const cobranzaInvoices: Record<string, { number: string, isPaid: boolean }[]> = {};
           
           monthly.forEach((m: any) => {
             const reconciliationsKey = `nats_conciliation_reconciliations_${client.cliente}_${m.mes}`;
@@ -146,6 +211,10 @@ export default function App() {
                     totalEsperadoGlobal += amt;
                     totalRecibidoGlobal += received;
                     totalConciliadoGlobal += isEmitido ? amt : 0;
+
+                    const cobKey = (t.polizaCobranza || '-').trim();
+                    if (!cobranzaInvoices[cobKey]) cobranzaInvoices[cobKey] = [];
+                    cobranzaInvoices[cobKey].push({ number: t.numRecibo || '', isPaid: isEmitido });
                   });
                 }
               });
@@ -157,10 +226,28 @@ export default function App() {
             if (item.recibo && !processedRecibos.has(item.recibo) && item.monto) {
               const amt = parseCurrency(item.monto);
               totalEsperadoGlobal += amt;
-              if (item.estado && item.estado.toLowerCase().includes('emitido')) {
+              const isEmitido = item.estado && item.estado.toLowerCase().includes('emitido');
+              if (isEmitido) {
                 totalConciliadoGlobal += amt;
               }
+              const cobKey = (item.polizaCobranza || '-').trim();
+              if (!cobranzaInvoices[cobKey]) cobranzaInvoices[cobKey] = [];
+              cobranzaInvoices[cobKey].push({ number: item.recibo || '', isPaid: !!isEmitido });
             }
+          });
+
+          // Check order
+          Object.values(cobranzaInvoices).forEach(invoices => {
+            invoices.sort((a, b) => {
+              const numA = parseInt(a.number.replace(/\D/g, '')) || 0;
+              const numB = parseInt(b.number.replace(/\D/g, '')) || 0;
+              return numA - numB;
+            });
+            let foundUnpaid = false;
+            invoices.forEach(inv => {
+              if (inv.isPaid && foundUnpaid) hasOrderError = true;
+              if (!inv.isPaid) foundUnpaid = true;
+            });
           });
           
           const porConciliar = totalEsperadoGlobal - totalConciliadoGlobal;
@@ -174,7 +261,8 @@ export default function App() {
             totalPagado: currencyFormatter.format(totalConciliadoGlobal),
             porConciliar: currencyFormatter.format(Math.max(0, porConciliar)),
             porcentaje: Math.min(100, Math.max(0, porcentaje)),
-            porcentajePago: Math.min(100, Math.max(0, porcentaje))
+            porcentajePago: Math.min(100, Math.max(0, porcentaje)),
+            hasOrderError
           };
         }
         return client;

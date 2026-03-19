@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ArrowLeft, ChevronRight, FileText, Shield, Building2, Receipt, Home, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, ChevronRight, FileText, Shield, Building2, Receipt, Home, Trash2, Upload, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ClientData, Subsidiary, PolizaPadre, PolizaCobranza, Invoice } from './ClientTable';
 
@@ -167,6 +167,42 @@ export function PoliciesTableView({
       }
     });
 
+    // 4. Sort and check for out-of-order payments
+    Object.values(subsMap).forEach(sub => {
+      let subHasError = false;
+      sub.polizasPadre.forEach(padre => {
+        let padreHasError = false;
+        padre.cobranzas.forEach(cobranza => {
+          // Sort invoices by number
+          cobranza.invoices.sort((a, b) => {
+            const numA = parseInt(a.number.toString().replace(/\D/g, '')) || 0;
+            const numB = parseInt(b.number.toString().replace(/\D/g, '')) || 0;
+            if (numA !== numB) return numA - numB;
+            return a.number.toString().localeCompare(b.number.toString());
+          });
+
+          // Check for out of order
+          let foundUnpaid = false;
+          let cobranzaHasError = false;
+          cobranza.invoices.forEach(inv => {
+            const isInvPaid = inv.status === 'paid' || (inv.estado && inv.estado.toLowerCase().includes('emitido'));
+            if (isInvPaid && foundUnpaid) {
+              inv.outOfOrder = true;
+              cobranzaHasError = true;
+              padreHasError = true;
+              subHasError = true;
+            }
+            if (!isInvPaid) {
+              foundUnpaid = true;
+            }
+          });
+          cobranza.hasOrderError = cobranzaHasError;
+        });
+        padre.hasOrderError = padreHasError;
+      });
+      sub.hasOrderError = subHasError;
+    });
+
     return Object.values(subsMap);
   }, [client.cliente]);
 
@@ -232,6 +268,7 @@ export function PoliciesTableView({
     let actualPaid = 0;
     let allEmitido = true;
     let hasInvoices = false;
+    let hasOrderError = false;
 
     const processInvoices = (invoices: any[]) => {
       if (invoices.length > 0) hasInvoices = true;
@@ -248,6 +285,7 @@ export function PoliciesTableView({
         actualPaid += received;
         
         if (!isInvEmitido) allEmitido = false;
+        if (inv.outOfOrder) hasOrderError = true;
       });
     };
 
@@ -274,7 +312,7 @@ export function PoliciesTableView({
     
     const finalIsEmitido = hasInvoices ? allEmitido : (total === 0 && items.length > 0);
 
-    return { total, reconciled, actualPaid, remaining, percentage, paidPercentage, isEmitido: finalIsEmitido };
+    return { total, reconciled, actualPaid, remaining, percentage, paidPercentage, isEmitido: finalIsEmitido, hasOrderError };
   };
 
   const globalTotals = useMemo(() => calculateTotals(subsidiaries, 'subsidiaries'), [subsidiaries]);
@@ -452,6 +490,12 @@ export function PoliciesTableView({
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span className="text-[12px] font-normal text-gray-900">{item.label}</span>
+                        {item.hasOrderError && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100 animate-pulse" title="Error de orden de pago">
+                            <Bell className="w-3 h-3" />
+                            <span className="text-[9px] font-bold">ORDEN</span>
+                          </div>
+                        )}
                         {currentLevel !== 'invoices' && <ChevronRight className="w-3 h-3 text-gray-300" />}
                       </div>
                     </td>
@@ -552,6 +596,17 @@ export function PoliciesTableView({
               </div>
             </div>
           </div>
+          {globalTotals.hasOrderError && (
+            <div className="col-span-2 md:col-span-5 mt-4 flex items-center gap-3 bg-red-50 border border-red-100 p-3 rounded-xl animate-pulse">
+              <div className="p-2 bg-red-100 rounded-full text-red-600">
+                <Bell className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-red-700 uppercase tracking-wider">Alerta de Orden de Pago</p>
+                <p className="text-[10px] text-red-600">Se han detectado recibos pagados fuera de orden cronológico/numérico.</p>
+              </div>
+            </div>
+          )}
         </div>
         {onViewDetails && (
           <div className="mt-6 pt-6 border-t border-gray-50 flex justify-end">

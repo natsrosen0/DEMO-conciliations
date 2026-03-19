@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Bell } from 'lucide-react';
 
 export interface Responsible {
   name: string;
@@ -13,24 +13,28 @@ export interface Invoice {
   amount: string;
   paidAmount?: string;
   estado?: string;
+  outOfOrder?: boolean;
 }
 
 export interface PolizaCobranza {
   id: string;
   number: string;
   invoices: Invoice[];
+  hasOrderError?: boolean;
 }
 
 export interface PolizaPadre {
   id: string;
   number: string;
   cobranzas: PolizaCobranza[];
+  hasOrderError?: boolean;
 }
 
 export interface Subsidiary {
   id: string;
   name: string;
   polizasPadre: PolizaPadre[];
+  hasOrderError?: boolean;
 }
 
 export interface ClientData {
@@ -46,6 +50,7 @@ export interface ClientData {
   responsablesCuenta?: Responsible[];
   periodicidadPago?: 'Mensual' | 'Trimestral' | 'Anual';
   subsidiaries?: Subsidiary[];
+  hasOrderError?: boolean;
 }
 
   const ProgressBar = ({ percentage, color }: { percentage: number, color?: string }) => {
@@ -97,7 +102,17 @@ export function ClientTable({
                 className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors cursor-pointer"
                 onClick={() => onRowClick(row)}
               >
-                <td className="py-3 px-4 text-[12px] font-normal text-gray-900">{row.cliente}</td>
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-normal text-gray-900">{row.cliente}</span>
+                    {row.hasOrderError && (
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100 animate-pulse" title="Error de orden de pago">
+                        <Bell className="w-3 h-3" />
+                        <span className="text-[9px] font-bold uppercase">Orden</span>
+                      </div>
+                    )}
+                  </div>
+                </td>
                 <td className="py-3 px-4 text-[12px] font-normal text-gray-500">{row.agente}</td>
                 <td className="py-3 px-4 text-[12px] font-normal text-gray-500">{row.transacciones}</td>
                 <td className="py-3 px-4 text-[12px] font-medium text-green-600">{row.totalPagado}</td>
