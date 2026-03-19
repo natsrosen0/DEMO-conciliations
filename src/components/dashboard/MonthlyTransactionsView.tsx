@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, MoreHorizontal, Trash2, Upload } from 'lucide-react';
 import { ReconciliationDetail } from './ReconciliationDetail';
-import { BulkBankUploadPanel } from './BulkBankUploadPanel';
+import { BulkDepositUploadPanel } from './BulkDepositUploadPanel';
 import { hoteleraTransactions, MonthlyTransaction } from '../../data/hoteleraTransactions';
 
 interface MonthlyTransactionsViewProps {
@@ -14,9 +14,9 @@ const defaultTransactions: MonthlyTransaction[] = [];
 
 export function MonthlyTransactionsView({ clientName, monthName, onBack }: MonthlyTransactionsViewProps) {
   const [selectedTxn, setSelectedTxn] = useState<MonthlyTransaction | null>(null);
-  const [isAddBankModalOpen, setIsAddBankModalOpen] = useState(false);
-  const [isBulkBankUploadOpen, setIsBulkBankUploadOpen] = useState(false);
-  const [newBankData, setNewBankData] = useState({ account: '', amount: '', date: '' });
+  const [isAddDepositModalOpen, setIsAddDepositModalOpen] = useState(false);
+  const [isBulkDepositUploadOpen, setIsBulkDepositUploadOpen] = useState(false);
+  const [newDepositData, setNewDepositData] = useState({ account: '', amount: '', date: '' });
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
   const [reconciliationToDelete, setReconciliationToDelete] = useState<string | null>(null);
   const storageKey = `nats_conciliation_reconciliations_${clientName}_${monthName}`;
@@ -66,27 +66,27 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
     }
   }, [selectedTxn, clientName]);
 
-  const handleAddBank = () => {
+  const handleAddDeposit = () => {
     const newId = `TXN-${(transactions.length + 1).toString().padStart(3, '0')}`;
     
     const newReconciliation: MonthlyTransaction = {
       id: newId,
-      account: newBankData.account || '-',
-      fecha: newBankData.date || new Date().toLocaleDateString('es-MX'),
+      account: newDepositData.account || '-',
+      fecha: newDepositData.date || new Date().toLocaleDateString('es-MX'),
       numRecibos: 0,
-      montoRecibido: formatCurrency(parseCurrency(newBankData.amount)),
+      montoRecibido: formatCurrency(parseCurrency(newDepositData.amount)),
       montoEsperado: '$0.00',
-      diferencia: formatCurrency(parseCurrency(newBankData.amount)),
+      diferencia: formatCurrency(parseCurrency(newDepositData.amount)),
       estado: 'No conciliado'
     };
     
     setTransactions(prev => [newReconciliation, ...prev]);
-    setIsAddBankModalOpen(false);
-    setNewBankData({ account: '', amount: '', date: '' });
+    setIsAddDepositModalOpen(false);
+    setNewDepositData({ account: '', amount: '', date: '' });
   };
 
-  const handleBulkBankUpload = (data: any[]) => {
-    const newBanks: MonthlyTransaction[] = data.map((item, index) => {
+  const handleBulkDepositUpload = (data: any[]) => {
+    const newDeposits: MonthlyTransaction[] = data.map((item, index) => {
       const newId = `TXN-${(transactions.length + index + 1).toString().padStart(3, '0')}`;
       return {
         id: newId,
@@ -100,8 +100,8 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
       };
     });
 
-    setTransactions(prev => [...newBanks, ...prev]);
-    setIsBulkBankUploadOpen(false);
+    setTransactions(prev => [...newDeposits, ...prev]);
+    setIsBulkDepositUploadOpen(false);
   };
 
   const handleDeleteReconciliation = (id: string, e: React.MouseEvent) => {
@@ -155,23 +155,23 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
           </button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">{clientName} · {monthName}</h1>
-            <p className="text-[11px] font-normal text-gray-500">{transactions.length} transacciones bancarias</p>
+            <p className="text-[11px] font-normal text-gray-500">{transactions.length} depósitos</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setIsBulkBankUploadOpen(true)}
+            onClick={() => setIsBulkDepositUploadOpen(true)}
             className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-[11px] font-normal transition-colors shadow-sm"
           >
             <Upload className="w-4 h-4" />
             Carga Masiva
           </button>
           <button 
-            onClick={() => setIsAddBankModalOpen(true)}
+            onClick={() => setIsAddDepositModalOpen(true)}
             className="flex items-center gap-2 bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-2.5 rounded-lg text-[11px] font-normal transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            Agregar Deposito
+            Agregar Depósito
           </button>
         </div>
       </div>
@@ -272,19 +272,19 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
         </div>
       </div>
 
-      {/* Add Bank Modal */}
-      {isAddBankModalOpen && (
+      {/* Add Deposit Modal */}
+      {isAddDepositModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Agregar Transacción Bancaria</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Agregar Depósito</h3>
             
             <div className="space-y-4 mb-8">
               <div>
                 <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">Cuenta</label>
                 <input
                   type="text"
-                  value={newBankData.account}
-                  onChange={(e) => setNewBankData(prev => ({ ...prev, account: e.target.value }))}
+                  value={newDepositData.account}
+                  onChange={(e) => setNewDepositData(prev => ({ ...prev, account: e.target.value }))}
                   placeholder="Ej: 1234567890"
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6b21a8]/20 focus:border-[#6b21a8] transition-all"
                 />
@@ -293,8 +293,8 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
                 <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">Monto</label>
                 <input
                   type="text"
-                  value={newBankData.amount}
-                  onChange={(e) => setNewBankData(prev => ({ ...prev, amount: e.target.value }))}
+                  value={newDepositData.amount}
+                  onChange={(e) => setNewDepositData(prev => ({ ...prev, amount: e.target.value }))}
                   placeholder="Ej: 50000.00"
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6b21a8]/20 focus:border-[#6b21a8] transition-all"
                 />
@@ -303,8 +303,8 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
                 <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">Fecha</label>
                 <input
                   type="text"
-                  value={newBankData.date}
-                  onChange={(e) => setNewBankData(prev => ({ ...prev, date: e.target.value }))}
+                  value={newDepositData.date}
+                  onChange={(e) => setNewDepositData(prev => ({ ...prev, date: e.target.value }))}
                   placeholder="DD/MM/YYYY"
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6b21a8]/20 focus:border-[#6b21a8] transition-all"
                 />
@@ -313,13 +313,13 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
             
             <div className="flex gap-3">
               <button
-                onClick={() => setIsAddBankModalOpen(false)}
+                onClick={() => setIsAddDepositModalOpen(false)}
                 className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-normal text-[11px] rounded-xl hover:bg-gray-50 transition-colors"
               >
                 Cancelar
               </button>
               <button
-                onClick={handleAddBank}
+                onClick={handleAddDeposit}
                 className="flex-1 px-4 py-2.5 bg-[#6b21a8] text-white font-normal text-[11px] rounded-xl hover:bg-[#581c87] transition-colors shadow-sm"
               >
                 Agregar
@@ -329,10 +329,10 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
         </div>
       )}
 
-      <BulkBankUploadPanel
-        isOpen={isBulkBankUploadOpen}
-        onClose={() => setIsBulkBankUploadOpen(false)}
-        onUpload={handleBulkBankUpload}
+      <BulkDepositUploadPanel
+        isOpen={isBulkDepositUploadOpen}
+        onClose={() => setIsBulkDepositUploadOpen(false)}
+        onUpload={handleBulkDepositUpload}
       />
 
       {/* Delete Confirmation Modal */}

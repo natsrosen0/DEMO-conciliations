@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { X, Upload, Download, AlertCircle } from 'lucide-react';
 
-interface BulkBankUploadPanelProps {
+interface BulkDepositUploadPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onUpload: (data: any[]) => void;
 }
 
-export function BulkBankUploadPanel({ isOpen, onClose, onUpload }: BulkBankUploadPanelProps) {
+export function BulkDepositUploadPanel({ isOpen, onClose, onUpload }: BulkDepositUploadPanelProps) {
   const [pastedData, setPastedData] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -17,7 +17,7 @@ export function BulkBankUploadPanel({ isOpen, onClose, onUpload }: BulkBankUploa
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "plantilla_bancos.csv");
+    link.setAttribute("download", "plantilla_depositos.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -87,8 +87,8 @@ export function BulkBankUploadPanel({ isOpen, onClose, onUpload }: BulkBankUploa
       <div className="fixed inset-y-0 right-0 w-full max-w-xl bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
         <div className="flex items-start justify-between px-6 py-6 border-b border-gray-100">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Carga Masiva de Bancos</h2>
-            <p className="text-[11px] font-normal text-gray-500 mt-1">Pega tus transacciones bancarias desde Excel</p>
+            <h2 className="text-xl font-bold text-gray-900">Carga Masiva de Depósitos</h2>
+            <p className="text-[11px] font-normal text-gray-500 mt-1">Pega tus depósitos desde Excel</p>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-5 h-5" />
