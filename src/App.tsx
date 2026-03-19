@@ -11,7 +11,6 @@ import { SummaryCards } from './components/dashboard/SummaryCards';
 import { ClientTable, ClientData, Responsible } from './components/dashboard/ClientTable';
 import { AddClientPanel } from './components/dashboard/AddClientPanel';
 import { ClientDetail } from './components/dashboard/ClientDetail';
-import { PoliciesPage } from './components/dashboard/PoliciesPage';
 
 const initialData: ClientData[] = [];
 
@@ -188,6 +187,8 @@ export default function App() {
     agente: string;
     gnpResponsables: Responsible[];
     intermediarioResponsables: Responsible[];
+    responsablesCuenta: Responsible[];
+    periodicidadPago: 'Mensual' | 'Trimestral' | 'Anual';
   }) => {
     const clientData: ClientData = {
       ...newClient,
@@ -220,9 +221,7 @@ export default function App() {
         <Header />
         
         <main className="flex-1 overflow-y-auto p-8 relative">
-          {currentView === 'policies' ? (
-            <PoliciesPage clients={clients} />
-          ) : selectedClient ? (
+          {selectedClient ? (
             <ClientDetail 
               client={selectedClient} 
               onBack={() => setSelectedClient(null)} 

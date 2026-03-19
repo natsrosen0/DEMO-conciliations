@@ -43,6 +43,8 @@ export interface ClientData {
   totalPagado?: string;
   gnpResponsables?: Responsible[];
   intermediarioResponsables?: Responsible[];
+  responsablesCuenta?: Responsible[];
+  periodicidadPago?: 'Mensual' | 'Trimestral' | 'Anual';
   subsidiaries?: Subsidiary[];
 }
 
@@ -53,7 +55,7 @@ export interface ClientData {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs font-bold w-10 text-gray-900">{percentage}%</span>
+      <span className="text-[10px] font-medium w-10 text-gray-900">{percentage}%</span>
       <div className={`h-1.5 w-24 rounded-full ${bgColor} overflow-hidden`}>
         <div 
           className={`h-full rounded-full ${barColor}`} 
@@ -79,13 +81,13 @@ export function ClientTable({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-200">
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">Cliente</th>
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">Agente</th>
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">Transacciones</th>
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">Total Pagado</th>
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">Por conciliar</th>
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">% Pagado</th>
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-16"></th>
+              <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider w-1/6">Cliente</th>
+              <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider w-1/6">Agente</th>
+              <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider w-1/6">Transacciones</th>
+              <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider w-1/6">Total Pagado</th>
+              <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider w-1/6">Valor Total</th>
+              <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider w-1/6">% Pagado</th>
+              <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider w-16"></th>
             </tr>
           </thead>
           <tbody>
@@ -95,11 +97,11 @@ export function ClientTable({
                 className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors cursor-pointer"
                 onClick={() => onRowClick(row)}
               >
-                <td className="py-3 px-4 text-xs font-bold text-gray-900">{row.cliente}</td>
-                <td className="py-3 px-4 text-xs text-gray-500">{row.agente}</td>
-                <td className="py-3 px-4 text-xs text-gray-500">{row.transacciones}</td>
-                <td className="py-3 px-4 text-xs font-bold text-green-600">{row.totalPagado}</td>
-                <td className="py-3 px-4 text-xs text-gray-500">{row.porConciliar}</td>
+                <td className="py-3 px-4 text-[12px] font-normal text-gray-900">{row.cliente}</td>
+                <td className="py-3 px-4 text-[12px] font-normal text-gray-500">{row.agente}</td>
+                <td className="py-3 px-4 text-[12px] font-normal text-gray-500">{row.transacciones}</td>
+                <td className="py-3 px-4 text-[12px] font-medium text-green-600">{row.totalPagado}</td>
+                <td className="py-3 px-4 text-[12px] font-normal text-gray-500">{row.porConciliar}</td>
                 <td className="py-3 px-4">
                   <ProgressBar percentage={row.porcentajePago || 0} color="bg-blue-600" />
                 </td>
@@ -117,7 +119,7 @@ export function ClientTable({
           </tbody>
         </table>
       </div>
-      <div className="py-4 px-6 text-xs text-gray-400 border-t border-gray-100">
+      <div className="py-4 px-6 text-[10px] font-normal text-gray-400 border-t border-gray-100">
         Mostrando {data.length} de {data.length}
       </div>
     </div>

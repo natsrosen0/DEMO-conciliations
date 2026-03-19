@@ -5,13 +5,23 @@ import { ClientData, Subsidiary, PolizaPadre, PolizaCobranza, Invoice } from './
 
 interface PoliciesTableViewProps {
   client: ClientData;
-  onBack: () => void;
+  onBack?: () => void;
   onUploadClick: () => void;
+  hideHeader?: boolean;
+  summaryOnly?: boolean;
+  onViewDetails?: () => void;
 }
 
 type ViewLevel = 'subsidiaries' | 'padres' | 'cobranzas' | 'invoices';
 
-export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTableViewProps) {
+export function PoliciesTableView({ 
+  client, 
+  onBack, 
+  onUploadClick, 
+  hideHeader = false,
+  summaryOnly = false,
+  onViewDetails
+}: PoliciesTableViewProps) {
   const [currentLevel, setCurrentLevel] = useState<ViewLevel>('subsidiaries');
   const [selectedSubsidiary, setSelectedSubsidiary] = useState<Subsidiary | null>(null);
   const [selectedPadre, setSelectedPadre] = useState<PolizaPadre | null>(null);
@@ -269,12 +279,18 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
 
   const globalTotals = useMemo(() => calculateTotals(subsidiaries, 'subsidiaries'), [subsidiaries]);
 
+  const stats = useMemo(() => {
+    const subsCount = subsidiaries.length;
+    const padresCount = subsidiaries.reduce((acc, sub) => acc + sub.polizasPadre.length, 0);
+    return { subsCount, padresCount };
+  }, [subsidiaries]);
+
   const ProgressBar = ({ percentage, color }: { percentage: number, color?: string }) => {
     const isComplete = percentage === 100;
     const barColor = color || (isComplete ? 'bg-green-600' : 'bg-[#6b21a8]');
     return (
       <div className="flex items-center gap-3">
-        <span className="text-xs font-bold w-10 text-gray-900">{percentage}%</span>
+        <span className="text-[10px] font-medium w-10 text-gray-900">{percentage}%</span>
         <div className="h-1.5 w-24 rounded-full bg-gray-100 overflow-hidden">
           <div className={`h-full rounded-full ${barColor}`} style={{ width: `${percentage}%` }}></div>
         </div>
@@ -347,7 +363,7 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
         label: s.name,
         childCount: s.polizasPadre.length 
       }));
-      title = "Subsidiarias";
+      title = "Contratantes";
       icon = <Building2 className="w-4 h-4" />;
       childLabel = "Pólizas Padre";
     } else if (currentLevel === 'padres' && selectedSubsidiary) {
@@ -394,7 +410,7 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
             </div>
             <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">{title}</h3>
           </div>
-          <span className="text-[10px] font-bold bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
+          <span className="text-[10px] font-medium bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
             {data.length} REGISTROS
           </span>
         </div>
@@ -402,15 +418,15 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="py-3 px-4 text-xs font-semibold text-gray-900">Nombre / Número</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Nombre / Número</th>
                 {currentLevel !== 'invoices' && (
-                  <th className="py-3 px-4 text-xs font-semibold text-gray-900 text-center">{childLabel}</th>
+                  <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider text-center">{childLabel}</th>
                 )}
-                <th className="py-3 px-4 text-xs font-semibold text-gray-900">Total Pagado</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-900">Valor Total</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-900">% Pagado</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Total Pagado</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Valor Total</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">% Pagado</th>
                 {(currentLevel === 'cobranzas' || currentLevel === 'invoices') && (
-                  <th className="py-3 px-4 text-xs font-semibold text-gray-900">Estado</th>
+                  <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                 )}
               </tr>
             </thead>
@@ -435,29 +451,29 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
                   >
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-gray-900">{item.label}</span>
+                        <span className="text-[12px] font-normal text-gray-900">{item.label}</span>
                         {currentLevel !== 'invoices' && <ChevronRight className="w-3 h-3 text-gray-300" />}
                       </div>
                     </td>
                     {currentLevel !== 'invoices' && (
                       <td className="py-3 px-4 text-center">
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[12px] font-medium">
                           {item.childCount}
                         </span>
                       </td>
                     )}
                     <td className="py-3 px-4">
-                      <span className="text-xs font-bold text-green-600">
+                      <span className="text-[12px] font-medium text-green-600">
                         {formatCurrency(item.reconciled)}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-xs font-bold text-gray-900">{formatCurrency(item.total)}</td>
+                    <td className="py-3 px-4 text-[12px] font-medium text-gray-900">{formatCurrency(item.total)}</td>
                     <td className="py-3 px-4">
                       <ProgressBar percentage={item.percentage} color="bg-blue-600" />
                     </td>
                     {(currentLevel === 'cobranzas' || currentLevel === 'invoices') && (
                       <td className="py-3 px-4">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
                           item.isEmitido
                             ? 'bg-green-50 text-green-700 border border-green-100' 
                             : 'bg-amber-50 text-amber-700 border border-amber-100'
@@ -501,8 +517,56 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
       }
     }
     keysToRemove.forEach(key => localStorage.removeItem(key));
-    onBack(); // Go back to the list as the data is now gone
+    onBack?.(); // Go back to the list as the data is now gone
   };
+
+  if (summaryOnly) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+          <div className="space-y-1">
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Contratantes</p>
+            <p className="text-[14px] font-medium text-gray-900">{stats.subsCount}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Pólizas Padre</p>
+            <p className="text-[14px] font-medium text-gray-900">{stats.padresCount}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total Pagado</p>
+            <p className="text-[14px] font-medium text-green-600">{formatCurrency(globalTotals.reconciled)}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Valor Total</p>
+            <p className="text-[14px] font-medium text-gray-900">{formatCurrency(globalTotals.total)}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">% Pagado</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[14px] font-medium text-[#6b21a8]">{globalTotals.percentage}%</p>
+              <div className="flex-1 h-1.5 w-12 rounded-full bg-gray-100 overflow-hidden hidden sm:block">
+                <div 
+                  className={`h-full rounded-full ${globalTotals.percentage === 100 ? 'bg-green-500' : 'bg-[#6b21a8]'}`} 
+                  style={{ width: `${globalTotals.percentage}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {onViewDetails && (
+          <div className="mt-6 pt-6 border-t border-gray-50 flex justify-end">
+            <button 
+              onClick={onViewDetails}
+              className="text-[11px] font-medium text-[#6b21a8] hover:text-[#581c87] transition-colors flex items-center gap-1"
+            >
+              Ver detalle de pólizas
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -517,13 +581,13 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                className="flex-1 px-4 py-2.5 text-[11px] font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={executeDelete}
-                className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-lg shadow-red-200"
+                className="flex-1 px-4 py-2.5 text-[11px] font-medium text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-lg shadow-red-200"
               >
                 Eliminar
               </button>
@@ -532,64 +596,68 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
         </div>
       )}
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={onBack}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Resumen de Pólizas</h1>
-            <p className="text-sm text-gray-500">{client.cliente}</p>
+      {!hideHeader && (
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={onBack}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900">Resumen de Pólizas</h1>
+              <p className="text-sm text-gray-500">{client.cliente}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onUploadClick}
+              className="flex items-center gap-2 px-4 py-2 text-[11px] font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-xl transition-all border border-gray-200 shadow-sm"
+            >
+              <Upload className="w-4 h-4" />
+              Cargar Estructura
+            </button>
+            <button
+              onClick={handleDeleteStructure}
+              className="flex items-center gap-2 px-4 py-2 text-[11px] font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100"
+            >
+              <Trash2 className="w-4 h-4" />
+              Eliminar Estructura
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onUploadClick}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 rounded-xl transition-all border border-gray-200 shadow-sm"
-          >
-            <Upload className="w-4 h-4" />
-            Cargar Estructura
-          </button>
-          <button
-            onClick={handleDeleteStructure}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100"
-          >
-            <Trash2 className="w-4 h-4" />
-            Eliminar Estructura
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Valor Total</h3>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-gray-900">{formatCurrency(globalTotals.total)}</span>
+      {!hideHeader && (
+        <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 mb-8`}>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <h3 className="text-[10px] font-medium text-gray-500 mb-1 uppercase tracking-wider">Valor Total</h3>
+            <div className="flex items-baseline gap-2">
+              <span className="text-[14px] font-medium text-gray-900">{formatCurrency(globalTotals.total)}</span>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+              <h3 className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Total Pagado</h3>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-[14px] font-medium text-green-600">{formatCurrency(globalTotals.reconciled)}</span>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <div className={`w-2 h-2 rounded-full ${globalTotals.percentage === 100 ? 'bg-green-500' : 'bg-blue-600'}`}></div>
+              <h3 className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">% Pagado</h3>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-[14px] font-medium text-gray-900">{globalTotals.percentage}%</span>
+            </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 rounded-full bg-blue-600"></div>
-            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Pagado</h3>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-blue-600">{formatCurrency(globalTotals.reconciled)}</span>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-1">
-            <div className={`w-2 h-2 rounded-full ${globalTotals.percentage === 100 ? 'bg-green-500' : 'bg-blue-600'}`}></div>
-            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">% Pagado</h3>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-gray-900">{globalTotals.percentage}%</span>
-          </div>
-        </div>
-      </div>
+      )}
 
       {renderBreadcrumbs()}
       {renderTable()}

@@ -79,7 +79,7 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
               <div className="flex-1 bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold text-[#6b21a8]">Resource A</h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-[11px] font-normal text-gray-500">
                     <span>Trigger</span>
                     <HelpCircle className="w-4 h-4" />
                     <button 
@@ -97,18 +97,18 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                       <FileText className="w-5 h-5 text-gray-400" />
                     </div>
-                    <select className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 font-medium">
+                    <select className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-[11px] font-normal">
                       <option>DOC 1</option>
                     </select>
                   </div>
                   
                   <div>
-                    <label className="block text-sm text-gray-500 mb-1.5">Reconcilable group</label>
+                    <label className="block text-[10px] font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Reconcilable group</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                         <Settings2 className="w-4 h-4 text-gray-400" />
                       </div>
-                      <select className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700">
+                      <select className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-[11px] font-normal">
                         <option>Default</option>
                       </select>
                     </div>
@@ -118,8 +118,8 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
 
               {/* Crossover Button */}
               <div className="flex flex-col items-center justify-center">
-                <span className="text-sm text-gray-500 mb-2">Crossover 1:1</span>
-                <button className="bg-[#6b21a8] hover:bg-[#581c87] text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-sm whitespace-nowrap">
+                <span className="text-[11px] font-normal text-gray-500 mb-2">Crossover 1:1</span>
+                <button className="bg-[#6b21a8] hover:bg-[#581c87] text-white px-6 py-2.5 rounded-lg text-[11px] font-normal transition-colors shadow-sm whitespace-nowrap">
                   Configure crossover
                 </button>
               </div>
@@ -128,7 +128,7 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
               <div className="flex-1 bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold text-[#6b21a8]">Resource B</h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-[11px] font-normal text-gray-500">
                     <span>Trigger</span>
                     <HelpCircle className="w-4 h-4" />
                     <button 
@@ -137,7 +137,7 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                     >
                       <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${triggerB ? 'translate-x-5' : 'translate-x-1'}`} />
                     </button>
-                    <span className={triggerB ? 'text-gray-900 font-medium' : ''}>{triggerB ? 'Yes' : 'No'}</span>
+                    <span className={triggerB ? 'text-gray-900 font-normal' : ''}>{triggerB ? 'Yes' : 'No'}</span>
                   </div>
                 </div>
                 
@@ -146,18 +146,18 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                       <FileText className="w-5 h-5 text-gray-400" />
                     </div>
-                    <select className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 font-medium">
+                    <select className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-[11px] font-normal">
                       <option>DOC 2</option>
                     </select>
                   </div>
                   
                   <div>
-                    <label className="block text-sm text-gray-500 mb-1.5">Reconcilable group</label>
+                    <label className="block text-[10px] font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Reconcilable group</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                         <Settings2 className="w-4 h-4 text-gray-400" />
                       </div>
-                      <select className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700">
+                      <select className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-[11px] font-normal">
                         <option>Default</option>
                       </select>
                     </div>
@@ -168,7 +168,7 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
 
             {/* Rules Section */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-100 bg-gray-50/50 text-sm font-medium text-gray-500">
+              <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-100 bg-gray-50/50 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
                 <div className="col-span-4">DOC 1</div>
                 <div className="col-span-4">DOC 2</div>
                 <div className="col-span-2">Tolerance</div>
@@ -182,7 +182,7 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                       <select 
                         value={rule.doc1Field}
                         onChange={(e) => updateRule(rule.id, 'doc1Field', e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700"
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-[11px] font-normal"
                       >
                         <option value="">Select field...</option>
                         <option value="POLIZA">POLIZA</option>
@@ -195,14 +195,14 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                       <select 
                         value={rule.operator}
                         onChange={(e) => updateRule(rule.id, 'operator', e.target.value)}
-                        className="w-16 px-2 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-center"
+                        className="w-16 px-2 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-center text-[11px] font-normal"
                       >
                         <option value="=">=</option>
                       </select>
                       <select 
                         value={rule.doc2Field}
                         onChange={(e) => updateRule(rule.id, 'doc2Field', e.target.value)}
-                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700"
+                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-[11px] font-normal"
                       >
                         <option value="">Select field...</option>
                         <option value="POLIZA">POLIZA</option>
@@ -216,7 +216,7 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                         type="number"
                         value={rule.tolerance}
                         onChange={(e) => updateRule(rule.id, 'tolerance', e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-center"
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-center text-[11px] font-normal"
                       />
                     </div>
                     
@@ -224,7 +224,7 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                       <select 
                         value={rule.unit}
                         onChange={(e) => updateRule(rule.id, 'unit', e.target.value)}
-                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700"
+                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-[#6b21a8] focus:border-[#6b21a8] outline-none text-gray-700 text-[11px] font-normal"
                       >
                         <option value="N/A">N/A</option>
                         <option value="%">%</option>
@@ -257,7 +257,7 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xl font-bold text-[#6b21a8]">Review reconciliation results</h3>
-                <button className="text-green-600 border border-green-600 hover:bg-green-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                <button className="text-green-600 border border-green-600 hover:bg-green-50 px-4 py-2 rounded-lg text-[11px] font-normal transition-colors">
                   CONFIGURE
                 </button>
               </div>
@@ -266,11 +266,11 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                 {/* DOC 1 Results */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2 font-bold text-gray-900">
+                    <div className="flex items-center gap-2 font-medium text-gray-900 text-[12px]">
                       <FileText className="w-5 h-5" />
                       DOC 1
                     </div>
-                    <span className="font-bold text-gray-900">100%</span>
+                    <span className="font-medium text-gray-900 text-[12px]">100%</span>
                   </div>
                   
                   <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden mb-6">
@@ -278,36 +278,36 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                   </div>
                   
                   <div className="space-y-3 mb-6">
-                    <div className="flex items-center justify-between text-gray-700">
+                    <div className="flex items-center justify-between text-gray-700 text-[11px] font-normal">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
                         <span>Reconciled</span>
                       </div>
-                      <span className="font-medium">110</span>
+                      <span className="font-normal">110</span>
                     </div>
-                    <div className="flex items-center justify-between text-gray-700">
+                    <div className="flex items-center justify-between text-gray-700 text-[11px] font-normal">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-red-500"></div>
                         <span>Unreconciled</span>
                       </div>
-                      <span className="font-medium">0</span>
+                      <span className="font-normal">0</span>
                     </div>
                   </div>
                   
-                  <div className="space-y-3 pt-6 border-t border-gray-100 text-gray-500">
+                  <div className="space-y-3 pt-6 border-t border-gray-100 text-gray-500 text-[10px] font-normal">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         <span>Total reconcilable</span>
                         <HelpCircle className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-gray-900">110</span>
+                      <span className="font-normal text-gray-900 text-[11px]">110</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         <span>Adjusted</span>
                         <HelpCircle className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-gray-900">0</span>
+                      <span className="font-normal text-gray-900 text-[11px]">0</span>
                     </div>
                   </div>
                 </div>
@@ -315,11 +315,11 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                 {/* DOC 2 Results */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2 font-bold text-gray-900">
+                    <div className="flex items-center gap-2 font-medium text-gray-900 text-[12px]">
                       <FileText className="w-5 h-5" />
                       DOC 2
                     </div>
-                    <span className="font-bold text-gray-900">29.56%</span>
+                    <span className="font-medium text-gray-900 text-[12px]">29.56%</span>
                   </div>
                   
                   <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden mb-6">
@@ -327,36 +327,36 @@ export function ReconciliationRulesModal({ isOpen, onClose }: ReconciliationRule
                   </div>
                   
                   <div className="space-y-3 mb-6">
-                    <div className="flex items-center justify-between text-gray-700">
+                    <div className="flex items-center justify-between text-gray-700 text-[11px] font-normal">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
                         <span>Reconciled</span>
                       </div>
-                      <span className="font-medium">110</span>
+                      <span className="font-normal">110</span>
                     </div>
-                    <div className="flex items-center justify-between text-gray-700">
+                    <div className="flex items-center justify-between text-gray-700 text-[11px] font-normal">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-red-500"></div>
                         <span>Unreconciled</span>
                       </div>
-                      <span className="font-medium">262</span>
+                      <span className="font-normal">262</span>
                     </div>
                   </div>
                   
-                  <div className="space-y-3 pt-6 border-t border-gray-100 text-gray-500">
+                  <div className="space-y-3 pt-6 border-t border-gray-100 text-gray-500 text-[10px] font-normal">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         <span>Total reconcilable</span>
                         <HelpCircle className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-gray-900">372</span>
+                      <span className="font-normal text-gray-900 text-[11px]">372</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         <span>Adjusted</span>
                         <HelpCircle className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-gray-900">0</span>
+                      <span className="font-normal text-gray-900 text-[11px]">0</span>
                     </div>
                   </div>
                 </div>

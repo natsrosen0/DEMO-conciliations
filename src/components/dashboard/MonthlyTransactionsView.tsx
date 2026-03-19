@@ -172,20 +172,20 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
           </button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">{clientName} · {monthName}</h1>
-            <p className="text-sm text-gray-500">{transactions.length} transacciones</p>
+            <p className="text-[11px] font-normal text-gray-500">{transactions.length} transacciones</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsBulkUploadOpen(true)}
-            className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-[11px] font-normal transition-colors shadow-sm"
           >
             <Upload className="w-4 h-4" />
             Carga Masiva
           </button>
           <button 
             onClick={handleAddReconciliation}
-            className="flex items-center gap-2 bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-2.5 rounded-lg text-[11px] font-normal transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Agregar
@@ -196,20 +196,20 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 mb-1">Monto Total Recibido</p>
-          <p className="text-xl font-bold text-gray-900">
+          <p className="text-[10px] font-normal text-gray-500 mb-1 uppercase tracking-wider">Monto Total Recibido</p>
+          <p className="text-[14px] font-bold text-green-600">
             ${totalRecibido.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 mb-1">Monto Total Esperado</p>
-          <p className="text-xl font-bold text-gray-900">
+          <p className="text-[10px] font-normal text-gray-500 mb-1 uppercase tracking-wider">Monto Total Esperado</p>
+          <p className="text-[14px] font-bold text-gray-900">
             ${totalEsperado.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 mb-1">Diferencia</p>
-          <p className={`text-xl font-bold ${diferenciaTotal === 0 ? 'text-green-600' : 'text-red-500'}`}>
+          <p className="text-[10px] font-normal text-gray-500 mb-1 uppercase tracking-wider">Diferencia</p>
+          <p className={`text-[14px] font-bold ${diferenciaTotal === 0 ? 'text-green-600' : 'text-red-500'}`}>
             {diferenciaTotal > 0 ? '+' : diferenciaTotal < 0 ? '-' : ''}${Math.abs(diferenciaTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
@@ -221,14 +221,14 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">ID</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Fecha</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Num. de Recibos</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Monto Recibido</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Monto Esperado</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Diferencia</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Estado</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500 w-12"></th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Num. de Recibos</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Monto Recibido</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Monto Esperado</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Diferencia</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider w-12"></th>
               </tr>
             </thead>
             <tbody>
@@ -240,14 +240,14 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
                     className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors cursor-pointer"
                     onClick={() => setSelectedTxn(row)}
                   >
-                    <td className="py-3 px-4 text-xs text-gray-500 font-mono">{row.id}</td>
-                    <td className="py-3 px-4 text-xs text-gray-900">{row.fecha}</td>
-                    <td className="py-3 px-4 text-xs text-gray-900">{row.numRecibos}</td>
-                    <td className={`py-3 px-4 text-xs font-semibold ${isError ? 'text-red-500' : 'text-gray-900'}`}>{row.montoRecibido}</td>
-                    <td className="py-3 px-4 text-xs font-semibold text-gray-900">{row.montoEsperado}</td>
-                    <td className={`py-3 px-4 text-xs font-semibold ${isError ? 'text-red-500' : 'text-gray-900'}`}>{row.diferencia}</td>
+                    <td className="py-3 px-4 text-[12px] font-normal text-gray-500 font-mono">{row.id}</td>
+                    <td className="py-3 px-4 text-[12px] font-normal text-gray-900">{row.fecha}</td>
+                    <td className="py-3 px-4 text-[12px] font-normal text-gray-900">{row.numRecibos}</td>
+                    <td className={`py-3 px-4 text-[12px] font-medium ${isError ? 'text-red-500' : 'text-gray-900'}`}>{row.montoRecibido}</td>
+                    <td className="py-3 px-4 text-[12px] font-medium text-gray-900">{row.montoEsperado}</td>
+                    <td className={`py-3 px-4 text-[12px] font-medium ${isError ? 'text-red-500' : 'text-gray-900'}`}>{row.diferencia}</td>
                     <td className="py-3 px-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium ${
                         isError 
                           ? 'bg-red-100 text-red-800' 
                           : 'bg-green-100 text-green-800'
@@ -313,13 +313,13 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
             <div className="flex gap-3">
               <button
                 onClick={() => setReconciliationToDelete(null)}
-                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-normal text-[11px] rounded-xl hover:bg-gray-50 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-sm"
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white font-normal text-[11px] rounded-xl hover:bg-red-700 transition-colors shadow-sm"
               >
                 Eliminar
               </button>

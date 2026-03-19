@@ -93,7 +93,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
               {isEditing ? 'Editar Transacción' : (type === 'poliza' ? 'Agregar Póliza' : 'Crear Nota de Crédito')}
             </h2>
             {isPreloaded && (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-[11px] font-normal text-gray-500 mt-1">
                 Asociada a póliza de cobranza {initialData.polizaCobranza}
               </p>
             )}
@@ -110,7 +110,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
           <form id="add-transaction-form" onSubmit={handleSubmit} className="space-y-6">
             {!isPreloaded && (
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                <label className="block text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">
                   Tipo de Transacción
                 </label>
                 <div className="flex gap-4">
@@ -123,7 +123,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
                       onChange={() => setType('poliza')}
                       className="text-[#6b21a8] focus:ring-[#6b21a8]"
                     />
-                    <span className="text-sm text-gray-700">Póliza</span>
+                    <span className="text-[11px] font-normal text-gray-700">Póliza</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input 
@@ -134,14 +134,14 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
                       onChange={() => setType('nota_credito')}
                       className="text-[#6b21a8] focus:ring-[#6b21a8]"
                     />
-                    <span className="text-sm text-gray-700">Nota de Crédito</span>
+                    <span className="text-[11px] font-normal text-gray-700">Nota de Crédito</span>
                   </label>
                 </div>
               </div>
             )}
 
             <div>
-              <label htmlFor="polizaPadre" className="block text-sm font-semibold text-gray-900 mb-2">
+              <label htmlFor="polizaPadre" className="block text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">
                 Póliza Padre
               </label>
               <input
@@ -150,7 +150,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
                 value={polizaPadre}
                 onChange={(e) => setPolizaPadre(e.target.value)}
                 disabled={isPreloaded}
-                className={`w-full px-4 py-3 border border-gray-200 rounded-lg outline-none transition-shadow text-gray-900 ${
+                className={`w-full px-4 py-3 border border-gray-200 rounded-lg outline-none transition-shadow text-gray-900 text-[11px] font-normal ${
                   isPreloaded ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8]'
                 }`}
                 placeholder="Ej. 37707147"
@@ -159,7 +159,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
             </div>
 
             <div>
-              <label htmlFor="polizaCobranza" className="block text-sm font-semibold text-gray-900 mb-2">
+              <label htmlFor="polizaCobranza" className="block text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">
                 Póliza de Cobranza
               </label>
               <input
@@ -168,7 +168,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
                 value={polizaCobranza}
                 onChange={(e) => setPolizaCobranza(e.target.value)}
                 disabled={isPreloaded}
-                className={`w-full px-4 py-3 border border-gray-200 rounded-lg outline-none transition-shadow text-gray-900 ${
+                className={`w-full px-4 py-3 border border-gray-200 rounded-lg outline-none transition-shadow text-gray-900 text-[11px] font-normal ${
                   isPreloaded ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8]'
                 }`}
                 placeholder="Ej. 45871231"
@@ -177,7 +177,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
             </div>
 
             <div>
-              <label htmlFor="numRecibo" className="block text-sm font-semibold text-gray-900 mb-2">
+              <label htmlFor="numRecibo" className="block text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">
                 {type === 'nota_credito' ? 'Num. Recibo (NC)' : 'Num. Recibo'}
               </label>
               <input
@@ -185,7 +185,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
                 id="numRecibo"
                 value={numRecibo}
                 onChange={(e) => setNumRecibo(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-[#6b21a8] rounded-lg focus:ring-0 focus:border-[#6b21a8] outline-none transition-shadow text-gray-900"
+                className="w-full px-4 py-3 border-2 border-[#6b21a8] rounded-lg focus:ring-0 focus:border-[#6b21a8] outline-none transition-shadow text-gray-900 text-[11px] font-normal"
                 placeholder={type === 'nota_credito' ? 'Ej. NC-001' : 'Ej. 2027034'}
                 required
               />
@@ -193,7 +193,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="montoEsperado" className="block text-sm font-semibold text-gray-900 mb-2">
+                <label htmlFor="montoEsperado" className="block text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">
                   Monto Esperado
                 </label>
                 <input
@@ -201,13 +201,13 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
                   id="montoEsperado"
                   value={montoEsperado}
                   onChange={(e) => setMontoEsperado(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900 text-[11px] font-normal"
                   placeholder="Ej. 500.00"
                   required
                 />
               </div>
               <div>
-                <label htmlFor="montoRecibido" className="block text-sm font-semibold text-gray-900 mb-2">
+                <label htmlFor="montoRecibido" className="block text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">
                   Monto Recibido
                 </label>
                 <input
@@ -215,7 +215,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
                   id="montoRecibido"
                   value={montoRecibido}
                   onChange={(e) => setMontoRecibido(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900 text-[11px] font-normal"
                   placeholder="Ej. 500.00"
                   required
                 />
@@ -223,7 +223,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
             </div>
 
             <div>
-              <label htmlFor="montoTransaccion" className="block text-sm font-semibold text-gray-900 mb-2">
+              <label htmlFor="montoTransaccion" className="block text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">
                 Monto Transacción
               </label>
               <input
@@ -231,7 +231,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
                 id="montoTransaccion"
                 value={montoTransaccion}
                 onChange={(e) => setMontoTransaccion(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900 text-[11px] font-normal"
                 placeholder="Ej. 1000.00"
               />
             </div>
@@ -242,7 +242,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
           <button
             type="submit"
             form="add-transaction-form"
-            className="w-full py-3.5 text-sm font-medium text-white bg-[#a87ebf] hover:bg-[#9b6eb5] rounded-lg transition-colors shadow-sm"
+            className="w-full py-3.5 text-[11px] font-normal text-white bg-[#a87ebf] hover:bg-[#9b6eb5] rounded-lg transition-colors shadow-sm"
           >
             {isEditing ? 'Guardar Cambios' : (type === 'poliza' ? 'Agregar Póliza' : 'Crear nota de crédito')}
           </button>

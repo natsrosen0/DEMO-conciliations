@@ -91,7 +91,7 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
         <div className="flex items-start justify-between px-6 py-6 border-b border-gray-100">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Cargar Estructura de Pólizas</h2>
-            <p className="text-sm text-gray-500 mt-1">Define la jerarquía de subsidiarias y pólizas desde Excel</p>
+            <p className="text-[11px] font-normal text-gray-500 mt-1">Define la jerarquía de subsidiarias y pólizas desde Excel</p>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-5 h-5" />
@@ -101,10 +101,10 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
         <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-semibold text-gray-900">Instrucciones</span>
+              <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Instrucciones</span>
               <button 
                 onClick={downloadTemplate}
-                className="flex items-center gap-2 text-sm text-[#6b21a8] hover:text-[#581c87] font-medium"
+                className="flex items-center gap-2 text-[11px] text-[#6b21a8] hover:text-[#581c87] font-normal"
               >
                 <Download className="w-4 h-4" />
                 Descargar Plantilla
@@ -112,20 +112,20 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
             </div>
             
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-              <p className="text-xs text-blue-800 leading-relaxed">
+              <p className="text-[10px] text-blue-800 leading-relaxed font-normal">
                 Copia las columnas de tu Excel en este orden: <br/>
                 <strong>Subsidiaria | Póliza Padre | Póliza de Cobranza | Recibo | Monto | Estado</strong>
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
+              <label className="block text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">
                 Pegar datos aquí
               </label>
               <textarea
                 value={pastedData}
                 onChange={(e) => setPastedData(e.target.value)}
-                className="w-full h-64 px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-sm font-mono"
+                className="w-full h-64 px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-[11px] font-mono font-normal"
                 placeholder="Pega aquí las filas de tu Excel..."
               />
             </div>
@@ -133,7 +133,7 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
             {error && (
               <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
                 <AlertCircle className="w-4 h-4" />
-                <span className="text-xs font-medium">{error}</span>
+                <span className="text-[10px] font-normal">{error}</span>
               </div>
             )}
           </div>
@@ -142,7 +142,7 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
         <div className="p-6 border-t border-gray-100">
           <button
             onClick={handleProcess}
-            className="w-full py-3.5 text-sm font-medium text-white bg-[#6b21a8] hover:bg-[#581c87] rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
+            className="w-full py-3.5 text-[11px] font-normal text-white bg-[#6b21a8] hover:bg-[#581c87] rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
           >
             <Upload className="w-4 h-4" />
             Procesar y Cargar

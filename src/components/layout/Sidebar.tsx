@@ -114,17 +114,6 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
                   Conciliación por cliente
                 </button>
               </li>
-              <li>
-                <button 
-                  onClick={() => onViewChange('policies')}
-                  className={`w-full text-left px-14 py-2 text-xs font-medium flex items-center gap-2 ${
-                    currentView === 'policies' ? 'text-[#6b21a8]' : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <FileText className="w-3 h-3" />
-                  Estructura de pólizas
-                </button>
-              </li>
             </ul>
           </li>
 

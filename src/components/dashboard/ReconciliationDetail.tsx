@@ -223,21 +223,21 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
           </button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">{clientName} · {reconciliationName}</h1>
-            <p className="text-sm text-gray-500">{totalRecibos} recibos</p>
+            <p className="text-[11px] font-normal text-gray-500">{totalRecibos} recibos</p>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsBulkUploadOpen(true)}
-            className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-[11px] font-normal transition-colors shadow-sm"
           >
             <Upload className="w-4 h-4" />
             Carga Masiva
           </button>
           <button 
             onClick={() => openTransactionPanel()}
-            className="flex items-center gap-2 bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-2.5 rounded-lg text-[11px] font-normal transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Agregar
@@ -248,20 +248,20 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 mb-1">Total Recibos</p>
-          <p className="text-xl font-bold text-gray-900">{totalRecibos}</p>
+          <p className="text-[10px] font-normal text-gray-500 mb-1 uppercase tracking-wider">Total Recibos</p>
+          <p className="text-[14px] font-bold text-gray-900">{totalRecibos}</p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 mb-1">Monto Esperado</p>
-          <p className="text-xl font-bold text-gray-900">{formatCurrency(montoEsperadoTotal)}</p>
+          <p className="text-[10px] font-normal text-gray-500 mb-1 uppercase tracking-wider">Monto Esperado</p>
+          <p className="text-[14px] font-bold text-gray-900">{formatCurrency(montoEsperadoTotal)}</p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 mb-1">Monto Recibido</p>
-          <p className="text-xl font-bold text-gray-900">{formatCurrency(montoRecibidoTotal)}</p>
+          <p className="text-[10px] font-normal text-gray-500 mb-1 uppercase tracking-wider">Monto Recibido</p>
+          <p className="text-[14px] font-bold text-green-600">{formatCurrency(montoRecibidoTotal)}</p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 mb-1">Diferencia</p>
-          <p className={`text-xl font-bold ${diferenciaTotal >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+          <p className="text-[10px] font-normal text-gray-500 mb-1 uppercase tracking-wider">Diferencia</p>
+          <p className={`text-[14px] font-bold ${diferenciaTotal >= 0 ? 'text-green-500' : 'text-red-500'}`}>
             {diferenciaTotal > 0 ? '+' : ''}{formatCurrency(diferenciaTotal)}
           </p>
         </div>
@@ -273,14 +273,14 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Póliza Padre</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Póliza de Cobranza</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Num. Recibo</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Monto Esperado</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Monto Recibido</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Monto Transacción</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500">Estado</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-500 w-12"></th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Póliza Padre</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Póliza de Cobranza</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Num. Recibo</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Monto Esperado</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Monto Recibido</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Monto Transacción</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider w-12"></th>
               </tr>
             </thead>
             <tbody>
@@ -290,14 +290,14 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
                 const estado = montoEsperadoNum === montoNum ? 'Conciliado' : 'No conciliado';
                 return (
                   <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3 px-4 text-xs text-gray-900">{row.polizaPadre}</td>
-                    <td className="py-3 px-4 text-xs text-gray-900">{row.polizaCobranza}</td>
-                    <td className="py-3 px-4 text-xs text-gray-900">{row.numRecibo}</td>
-                    <td className="py-3 px-4 text-xs text-gray-500">{row.montoEsperado}</td>
-                    <td className="py-3 px-4 text-xs font-semibold text-gray-900">{row.monto}</td>
-                    <td className="py-3 px-4 text-xs text-gray-500">{row.montoTransaccion || '-'}</td>
+                    <td className="py-3 px-4 text-[12px] font-normal text-gray-900">{row.polizaPadre}</td>
+                    <td className="py-3 px-4 text-[12px] font-normal text-gray-900">{row.polizaCobranza}</td>
+                    <td className="py-3 px-4 text-[12px] font-normal text-gray-900">{row.numRecibo}</td>
+                    <td className="py-3 px-4 text-[12px] font-normal text-gray-500">{row.montoEsperado}</td>
+                    <td className="py-3 px-4 text-[12px] font-medium text-gray-900">{row.monto}</td>
+                    <td className="py-3 px-4 text-[12px] font-normal text-gray-500">{row.montoTransaccion || '-'}</td>
                     <td className="py-3 px-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium ${
                         estado === 'Conciliado' 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-yellow-100 text-yellow-800'
@@ -379,13 +379,13 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
             <div className="flex gap-3">
               <button
                 onClick={() => setTransactionToDelete(null)}
-                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-normal text-[11px] rounded-xl hover:bg-gray-50 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-sm"
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white font-normal text-[11px] rounded-xl hover:bg-red-700 transition-colors shadow-sm"
               >
                 Eliminar
               </button>
