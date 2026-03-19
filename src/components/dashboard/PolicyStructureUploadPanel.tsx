@@ -12,7 +12,7 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
   const [error, setError] = useState<string | null>(null);
 
   const downloadTemplate = () => {
-    const headers = ['Subsidiaria', 'Póliza Padre', 'Póliza de Cobranza', 'Recibo', 'Monto'];
+    const headers = ['Subsidiaria', 'Póliza Padre', 'Póliza de Cobranza', 'Recibo', 'Monto', 'Estado'];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -42,14 +42,34 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
 
       const startIndex = (rows[0].toLowerCase().includes('subsidiaria') || rows[0].toLowerCase().includes('padre')) ? 1 : 0;
       
+      const splitRow = (row: string, delim: string) => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < row.length; i++) {
+          const char = row[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === delim && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim());
+        return result;
+      };
+
       const parsedData = rows.slice(startIndex).map(row => {
-        const columns = row.split(delimiter || ',');
+        const columns = splitRow(row, delimiter || ',');
         return {
-          subsidiaria: columns[0]?.trim() || 'Subsidiaria Principal',
-          polizaPadre: columns[1]?.trim() || '-',
-          polizaCobranza: columns[2]?.trim() || '-',
-          recibo: columns[3]?.trim() || null,
-          monto: columns[4]?.trim() || null
+          subsidiaria: columns[0] || 'Subsidiaria Principal',
+          polizaPadre: columns[1] || '-',
+          polizaCobranza: columns[2] || '-',
+          recibo: columns[3] || null,
+          monto: columns[4] || null,
+          estado: columns[5] || null
         };
       });
 
@@ -94,7 +114,7 @@ export function PolicyStructureUploadPanel({ isOpen, onClose, onUpload }: Policy
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
               <p className="text-xs text-blue-800 leading-relaxed">
                 Copia las columnas de tu Excel en este orden: <br/>
-                <strong>Subsidiaria | Póliza Padre | Póliza de Cobranza | Recibo | Monto</strong>
+                <strong>Subsidiaria | Póliza Padre | Póliza de Cobranza | Recibo | Monto | Estado</strong>
               </p>
             </div>
 

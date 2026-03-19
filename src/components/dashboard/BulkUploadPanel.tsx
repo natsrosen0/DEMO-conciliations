@@ -12,7 +12,7 @@ export function BulkUploadPanel({ isOpen, onClose, onUpload }: BulkUploadPanelPr
   const [error, setError] = useState<string | null>(null);
 
   const downloadTemplate = () => {
-    const headers = ['Póliza Padre', 'Póliza de Cobranza', 'Num. Recibo', 'Monto Esperado', 'Monto Recibido', 'Monto Transacción'];
+    const headers = ['Póliza Padre', 'Póliza de Cobranza', 'Num. Recibo', 'Monto Esperado', 'Monto Recibido', 'Monto Transacción', 'Estado'];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -42,15 +42,35 @@ export function BulkUploadPanel({ isOpen, onClose, onUpload }: BulkUploadPanelPr
 
       const startIndex = (rows[0].toLowerCase().includes('póliza') || rows[0].toLowerCase().includes('padre')) ? 1 : 0;
       
+      const splitRow = (row: string, delim: string) => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < row.length; i++) {
+          const char = row[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === delim && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim());
+        return result;
+      };
+
       const parsedData = rows.slice(startIndex).map(row => {
-        const columns = row.split(delimiter || ',');
+        const columns = splitRow(row, delimiter || ',');
         return {
-          polizaPadre: columns[0]?.trim() || '-',
-          polizaCobranza: columns[1]?.trim() || '-',
-          numRecibo: columns[2]?.trim() || `REC-${Math.floor(Math.random() * 10000)}`,
-          montoEsperado: columns[3]?.trim() || '0',
-          monto: columns[4]?.trim() || '0',
-          montoTransaccion: columns[5]?.trim() || '0'
+          polizaPadre: columns[0] || '-',
+          polizaCobranza: columns[1] || '-',
+          numRecibo: columns[2] || `REC-${Math.floor(Math.random() * 10000)}`,
+          montoEsperado: columns[3] || '0',
+          monto: columns[4] || '0',
+          montoTransaccion: columns[5] || '0',
+          estado: columns[6] || null
         };
       });
 
@@ -95,7 +115,7 @@ export function BulkUploadPanel({ isOpen, onClose, onUpload }: BulkUploadPanelPr
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
               <p className="text-xs text-blue-800 leading-relaxed">
                 Copia las columnas de tu Excel en este orden: <br/>
-                <strong>Póliza Padre | Póliza de Cobranza | Num. Recibo | Monto Esperado | Monto Recibido | Monto Transacción</strong>
+                <strong>Póliza Padre | Póliza de Cobranza | Num. Recibo | Monto Esperado | Monto Recibido | Monto Transacción | Estado</strong>
               </p>
             </div>
 

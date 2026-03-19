@@ -1,16 +1,17 @@
 import React, { useState, useMemo } from 'react';
-import { ArrowLeft, ChevronRight, FileText, Shield, Building2, Receipt, Home, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, FileText, Shield, Building2, Receipt, Home, Trash2, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ClientData, Subsidiary, PolizaPadre, PolizaCobranza, Invoice } from './ClientTable';
 
 interface PoliciesTableViewProps {
   client: ClientData;
   onBack: () => void;
+  onUploadClick: () => void;
 }
 
 type ViewLevel = 'subsidiaries' | 'padres' | 'cobranzas' | 'invoices';
 
-export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
+export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTableViewProps) {
   const [currentLevel, setCurrentLevel] = useState<ViewLevel>('subsidiaries');
   const [selectedSubsidiary, setSelectedSubsidiary] = useState<Subsidiary | null>(null);
   const [selectedPadre, setSelectedPadre] = useState<PolizaPadre | null>(null);
@@ -47,18 +48,20 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
 
     // 3. Build the hierarchy map
     const subsMap: Record<string, Subsidiary> = {};
-    const reciboToHierarchy: Record<string, { sub: string, padre: string, cobranza: string, monto?: string }> = {};
+    const reciboToHierarchy: Record<string, { sub: string, padre: string, cobranza: string, monto?: string, estado?: string }> = {};
+    const processedRecibos = new Set<string>();
 
     // First, populate with uploaded structure
     uploadedStructure.forEach((item: any) => {
-      const subName = item.subsidiaria || 'Subsidiaria Principal';
-      const padreNum = item.polizaPadre || '-';
-      const cobranzaNum = item.polizaCobranza || '-';
-      const reciboNum = item.recibo;
+      const subName = (item.subsidiaria || 'Subsidiaria Principal').trim();
+      const padreNum = (item.polizaPadre || '-').trim();
+      const cobranzaNum = (item.polizaCobranza || '-').trim();
+      const reciboNum = item.recibo?.toString().trim();
       const monto = item.monto;
+      const estado = item.estado;
 
       if (reciboNum) {
-        reciboToHierarchy[reciboNum] = { sub: subName, padre: padreNum, cobranza: cobranzaNum, monto };
+        reciboToHierarchy[reciboNum] = { sub: subName, padre: padreNum, cobranza: cobranzaNum, monto, estado };
       }
 
       if (!subsMap[subName]) {
@@ -81,12 +84,13 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
     // Then, add transactions
     allTransactions.forEach((txn: any) => {
       let subName = 'Subsidiaria Principal';
-      let padreNum = txn.polizaPadre || 'Sin Póliza Padre';
-      let cobranzaNum = txn.polizaCobranza || 'Sin Póliza Cobranza';
+      let padreNum = (txn.polizaPadre || 'Sin Póliza Padre').trim();
+      let cobranzaNum = (txn.polizaCobranza || 'Sin Póliza Cobranza').trim();
       
       let montoEsperadoStr = txn.montoEsperado;
       
-      const mapping = reciboToHierarchy[txn.numRecibo];
+      const reciboKey = txn.numRecibo?.toString().trim();
+      const mapping = reciboKey ? reciboToHierarchy[reciboKey] : null;
       if (mapping) {
         subName = mapping.sub;
         padreNum = mapping.padre;
@@ -94,6 +98,7 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
         if (mapping.monto) {
           montoEsperadoStr = mapping.monto;
         }
+        processedRecibos.add(reciboKey);
       }
 
       // Find or create the hierarchy path
@@ -115,14 +120,41 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
 
       const montoRecibido = parseCurrency(txn.monto);
       const montoEsperado = parseCurrency(montoEsperadoStr);
-      const isPaid = Math.abs(montoRecibido - montoEsperado) < 0.01 && montoEsperado > 0;
+      const isPaid = Math.abs(montoRecibido - montoEsperado) < 0.1 && montoEsperado > 0;
 
       cobranza.invoices.push({
         id: txn.id || Math.random().toString(36).substr(2, 9),
         number: txn.numRecibo || 'Sin Número',
         status: isPaid ? 'paid' : (montoRecibido > 0 ? 'error' : 'pending'),
-        amount: montoEsperadoStr
+        amount: montoEsperadoStr,
+        paidAmount: txn.monto,
+        estado: txn.estado || mapping?.estado
       });
+    });
+
+    // Finally, add receipts from structure that don't have transactions yet
+    uploadedStructure.forEach((item: any) => {
+      if (item.recibo && !processedRecibos.has(item.recibo)) {
+        const subName = item.subsidiaria || 'Subsidiaria Principal';
+        const padreNum = item.polizaPadre || '-';
+        const cobranzaNum = item.polizaCobranza || '-';
+        const monto = item.monto || '0';
+
+        const sub = subsMap[subName];
+        const padre = sub.polizasPadre.find(p => p.number === padreNum);
+        const cobranza = padre?.cobranzas.find(c => c.number === cobranzaNum);
+
+        if (cobranza) {
+          cobranza.invoices.push({
+            id: `struct-${item.recibo}`,
+            number: item.recibo,
+            status: 'pending',
+            amount: monto,
+            paidAmount: '0',
+            estado: item.estado
+          });
+        }
+      }
     });
 
     return Object.values(subsMap);
@@ -135,18 +167,75 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
     }).format(amount);
   };
 
-  const parseCurrency = (val: string) => parseFloat(val.replace(/[^-0-9.]/g, '')) || 0;
+  const parseCurrency = (val: string | number) => {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    
+    let str = val.toString().trim();
+    // Remove currency symbols and spaces, but keep digits, commas, dots, and minus
+    str = str.replace(/[^\d,.-]/g, '');
+    
+    if (!str) return 0;
+
+    const lastComma = str.lastIndexOf(',');
+    const lastDot = str.lastIndexOf('.');
+    
+    // If both exist, the one that appears last is the decimal separator
+    if (lastComma !== -1 && lastDot !== -1) {
+      if (lastComma > lastDot) {
+        // 1.234,56 format
+        return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+      } else {
+        // 1,234.56 format
+        return parseFloat(str.replace(/,/g, '')) || 0;
+      }
+    }
+    
+    // If only one exists, we need to guess
+    if (lastComma !== -1) {
+      const parts = str.split(',');
+      // If it looks like a thousands separator (e.g., 1,000 or 1,000,000)
+      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+        return parseFloat(str.replace(/,/g, '')) || 0;
+      }
+      // Otherwise treat as decimal
+      return parseFloat(str.replace(',', '.')) || 0;
+    }
+    
+    if (lastDot !== -1) {
+      const parts = str.split('.');
+      // If it looks like a thousands separator (e.g., 1.000)
+      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+        return parseFloat(str.replace(/\./g, '')) || 0;
+      }
+      // Otherwise treat as decimal (default for parseFloat)
+      return parseFloat(str) || 0;
+    }
+    
+    return parseFloat(str) || 0;
+  };
 
   // Helper to calculate totals for any level
   const calculateTotals = (items: any[], type: ViewLevel) => {
     let total = 0;
     let reconciled = 0;
+    let allEmitido = true;
+    let hasInvoices = false;
 
-    const processInvoices = (invoices: Invoice[]) => {
+    const processInvoices = (invoices: any[]) => {
+      if (invoices.length > 0) hasInvoices = true;
       invoices.forEach(inv => {
         const amt = parseCurrency(inv.amount);
+        const isInvEmitido = !!(inv.estado && inv.estado.toLowerCase().includes('emitido'));
+        
+        // If it is "Emitido", reflect full amount in Total Pagado.
+        // If it is not, it remains as 0 as per user request.
+        const paid = isInvEmitido ? amt : 0;
+        
         total += amt;
-        if (inv.status === 'paid') reconciled += amt;
+        reconciled += paid;
+        
+        if (!isInvEmitido) allEmitido = false;
       });
     };
 
@@ -169,8 +258,12 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
 
     const remaining = total - reconciled;
     const percentage = total === 0 ? 100 : Math.round((reconciled / total) * 100);
+    
+    // If there are no invoices, it's not "Emitido" unless it's a special case, 
+    // but for hierarchy levels we want to know if everything under them is issued.
+    const finalIsEmitido = hasInvoices ? allEmitido : (total === 0 && items.length > 0);
 
-    return { total, reconciled, remaining, percentage };
+    return { total, reconciled, remaining, percentage, isEmitido: finalIsEmitido };
   };
 
   const globalTotals = useMemo(() => calculateTotals(subsidiaries, 'subsidiaries'), [subsidiaries]);
@@ -277,15 +370,15 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
       icon = <FileText className="w-4 h-4" />;
       childLabel = "Recibos";
     } else if (currentLevel === 'invoices' && selectedCobranza) {
-      data = selectedCobranza.invoices.map(i => ({ 
-        ...i, 
-        total: parseCurrency(i.amount), 
-        reconciled: i.status === 'paid' ? parseCurrency(i.amount) : 0,
-        remaining: i.status === 'paid' ? 0 : parseCurrency(i.amount),
-        percentage: i.status === 'paid' ? 100 : 0,
-        label: i.number,
-        childCount: 0
-      }));
+      data = selectedCobranza.invoices.map(i => {
+        const totals = calculateTotals([i], 'invoices');
+        return { 
+          ...i, 
+          ...totals,
+          label: i.number,
+          childCount: 0
+        };
+      });
       title = "Recibos (Facturas)";
       icon = <Receipt className="w-4 h-4" />;
       childLabel = "-";
@@ -314,8 +407,12 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
                 )}
                 <th className="py-3 px-4 text-xs font-semibold text-gray-900">Total Pagado</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-900">Valor Total</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-900">Estado</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-900">% Conciliado</th>
+                {(currentLevel === 'cobranzas' || currentLevel === 'invoices') && (
+                  <>
+                    <th className="py-3 px-4 text-xs font-semibold text-gray-900">Estado</th>
+                    <th className="py-3 px-4 text-xs font-semibold text-gray-900">% Conciliado</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -356,18 +453,22 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-xs font-bold text-gray-900">{formatCurrency(item.total)}</td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        item.percentage === 100 
-                          ? 'bg-green-50 text-green-700 border border-green-100' 
-                          : 'bg-amber-50 text-amber-700 border border-amber-100'
-                      }`}>
-                        {item.percentage === 100 ? 'Emitido' : 'POR EMITIR'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <ProgressBar percentage={item.percentage} />
-                    </td>
+                    {(currentLevel === 'cobranzas' || currentLevel === 'invoices') && (
+                      <>
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            item.isEmitido
+                              ? 'bg-green-50 text-green-700 border border-green-100' 
+                              : 'bg-amber-50 text-amber-700 border border-amber-100'
+                          }`}>
+                            {item.isEmitido ? 'Emitido' : 'POR EMITIR'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <ProgressBar percentage={item.percentage} />
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))
               ) : (
@@ -382,16 +483,57 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
     );
   };
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const handleDeleteStructure = () => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar la estructura de pólizas para ${client.cliente}?`)) {
-      const structureKey = `nats_conciliation_structure_${client.cliente}`;
-      localStorage.removeItem(structureKey);
-      onBack(); // Go back to the list as the data is now gone
+    setConfirmDelete(true);
+  };
+
+  const executeDelete = () => {
+    const clientName = client.cliente;
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.startsWith(`nats_conciliation_structure_${clientName}`) ||
+        key.startsWith(`nats_conciliation_monthly_${clientName}`) ||
+        key.startsWith(`nats_conciliation_reconciliations_${clientName}`) ||
+        key.startsWith(`nats_conciliation_txns_${clientName}`)
+      )) {
+        keysToRemove.push(key);
+      }
     }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    onBack(); // Go back to the list as the data is now gone
   };
 
   return (
     <div className="max-w-7xl mx-auto">
+      {/* Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">¿Eliminar datos de {client.cliente}?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Se eliminarán permanentemente la estructura de pólizas y todas las transacciones asociadas a este cliente. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeDelete}
+                className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-lg shadow-red-200"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
@@ -406,13 +548,22 @@ export function PoliciesTableView({ client, onBack }: PoliciesTableViewProps) {
             <p className="text-sm text-gray-500">{client.cliente}</p>
           </div>
         </div>
-        <button
-          onClick={handleDeleteStructure}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100"
-        >
-          <Trash2 className="w-4 h-4" />
-          Eliminar Estructura
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onUploadClick}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 rounded-xl transition-all border border-gray-200 shadow-sm"
+          >
+            <Upload className="w-4 h-4" />
+            Cargar Estructura
+          </button>
+          <button
+            onClick={handleDeleteStructure}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100"
+          >
+            <Trash2 className="w-4 h-4" />
+            Eliminar Estructura
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}

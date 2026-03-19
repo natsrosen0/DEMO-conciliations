@@ -13,6 +13,7 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [confirmDelete, setConfirmDelete] = useState<{ type: 'single' | 'all', clientName?: string } | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-MX', {
@@ -24,7 +25,49 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
   const parseCurrency = (val: string | number) => {
     if (typeof val === 'number') return val;
     if (!val) return 0;
-    return parseFloat(val.toString().replace(/[^-0-9.]/g, '')) || 0;
+    
+    let str = val.toString().trim();
+    // Remove currency symbols and spaces, but keep digits, commas, dots, and minus
+    str = str.replace(/[^\d,.-]/g, '');
+    
+    if (!str) return 0;
+
+    const lastComma = str.lastIndexOf(',');
+    const lastDot = str.lastIndexOf('.');
+    
+    // If both exist, the one that appears last is the decimal separator
+    if (lastComma !== -1 && lastDot !== -1) {
+      if (lastComma > lastDot) {
+        // 1.234,56 format
+        return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+      } else {
+        // 1,234.56 format
+        return parseFloat(str.replace(/,/g, '')) || 0;
+      }
+    }
+    
+    // If only one exists, we need to guess
+    if (lastComma !== -1) {
+      const parts = str.split(',');
+      // If it looks like a thousands separator (e.g., 1,000 or 1,000,000)
+      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+        return parseFloat(str.replace(/,/g, '')) || 0;
+      }
+      // Otherwise treat as decimal
+      return parseFloat(str.replace(',', '.')) || 0;
+    }
+    
+    if (lastDot !== -1) {
+      const parts = str.split('.');
+      // If it looks like a thousands separator (e.g., 1.000)
+      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+        return parseFloat(str.replace(/\./g, '')) || 0;
+      }
+      // Otherwise treat as decimal (default for parseFloat)
+      return parseFloat(str) || 0;
+    }
+    
+    return parseFloat(str) || 0;
   };
 
   const getClientMetrics = (clientName: string) => {
@@ -41,19 +84,26 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
     let totalExpected = 0;
     let totalPaid = 0;
     const padreNumbers = new Set<string>();
+    const subsSet = new Set<string>();
+    
+    // Track which receipts have been processed from transactions
+    const processedRecibos = new Set<string>();
 
-    // Add from structure (unique padres)
+    // Map to track overrides and hierarchy from structure
+    const reciboToMonto: Record<string, number> = {};
+    const reciboToSub: Record<string, string> = {};
+
     uploadedStructure.forEach((item: any) => {
+      const subName = item.subsidiaria || 'Subsidiaria Principal';
+      subsSet.add(subName);
       if (item.polizaPadre && item.polizaPadre !== '-') {
         padreNumbers.add(item.polizaPadre);
       }
-    });
-
-    // Map to track overrides from structure
-    const reciboToMonto: Record<string, number> = {};
-    uploadedStructure.forEach((item: any) => {
-      if (item.recibo && item.monto) {
-        reciboToMonto[item.recibo] = parseCurrency(item.monto);
+      if (item.recibo) {
+        reciboToSub[item.recibo] = subName;
+        if (item.monto) {
+          reciboToMonto[item.recibo] = parseCurrency(item.monto);
+        }
       }
     });
 
@@ -73,25 +123,40 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
                 padreNumbers.add(txn.polizaPadre);
               }
 
+              // Count subsidiaries from transactions
+              const mappingSub = reciboToSub[txn.numRecibo];
+              if (mappingSub) {
+                subsSet.add(mappingSub);
+              } else {
+                subsSet.add('Subsidiaria Principal');
+              }
+
               const montoRecibido = parseCurrency(txn.monto);
               let montoEsperado = parseCurrency(txn.montoEsperado);
               
               // Apply override if exists
               if (txn.numRecibo && reciboToMonto[txn.numRecibo] !== undefined) {
                 montoEsperado = reciboToMonto[txn.numRecibo];
+                processedRecibos.add(txn.numRecibo);
               }
 
               totalExpected += montoEsperado;
-              if (Math.abs(montoRecibido - montoEsperado) < 0.01 && montoEsperado > 0) {
-                totalPaid += montoRecibido;
-              }
+              totalPaid += montoRecibido;
             });
           }
         });
       }
     });
 
+    // Add expected amounts from structure for receipts that don't have transactions yet
+    uploadedStructure.forEach((item: any) => {
+      if (item.recibo && !processedRecibos.has(item.recibo) && item.monto) {
+        totalExpected += parseCurrency(item.monto);
+      }
+    });
+
     return {
+      numSubsidiaries: subsSet.size,
       numPadres: padreNumbers.size,
       totalPaid,
       totalExpected
@@ -119,28 +184,52 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
 
   const handleDeleteStructure = (e: React.MouseEvent, clientName: string) => {
     e.stopPropagation();
-    if (window.confirm(`¿Estás seguro de que deseas eliminar la estructura de pólizas para ${clientName}?`)) {
-      const structureKey = `nats_conciliation_structure_${clientName}`;
-      localStorage.removeItem(structureKey);
-      setRefreshTrigger(prev => prev + 1);
+    setConfirmDelete({ type: 'single', clientName });
+  };
+
+  const executeDelete = () => {
+    if (!confirmDelete) return;
+
+    if (confirmDelete.type === 'single' && confirmDelete.clientName) {
+      const clientName = confirmDelete.clientName;
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith(`nats_conciliation_structure_${clientName}`) ||
+          key.startsWith(`nats_conciliation_monthly_${clientName}`) ||
+          key.startsWith(`nats_conciliation_reconciliations_${clientName}`) ||
+          key.startsWith(`nats_conciliation_txns_${clientName}`)
+        )) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    } else if (confirmDelete.type === 'all') {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('nats_conciliation_')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    }
+
+    setRefreshTrigger(prev => prev + 1);
+    setConfirmDelete(null);
+    if (selectedClient && confirmDelete.type === 'single' && confirmDelete.clientName === selectedClient.cliente) {
+      setSelectedClient(null);
     }
   };
 
   if (selectedClient) {
     return (
       <div className="relative h-full">
-        <div className="absolute top-0 right-0 z-10 p-8">
-          <button 
-            onClick={() => setIsUploadOpen(true)}
-            className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
-          >
-            <Upload className="w-4 h-4" />
-            Cargar Estructura
-          </button>
-        </div>
         <PoliciesTableView 
           client={selectedClient} 
           onBack={() => setSelectedClient(null)} 
+          onUploadClick={() => setIsUploadOpen(true)}
         />
         <PolicyStructureUploadPanel
           isOpen={isUploadOpen}
@@ -151,12 +240,55 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
     );
   }
 
+  const handleClearAllData = () => {
+    setConfirmDelete({ type: 'all' });
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Estructura de Pólizas</h1>
-        <p className="text-sm text-gray-500 mt-1">Resumen de jerarquías y estados de conciliación por contratante.</p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Estructura de Pólizas</h1>
+          <p className="text-sm text-gray-500 mt-1">Resumen de jerarquías y estados de conciliación por contratante.</p>
+        </div>
+        <button
+          onClick={handleClearAllData}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100"
+        >
+          <Trash2 className="w-4 h-4" />
+          Limpiar Todo
+        </button>
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              {confirmDelete.type === 'all' ? '¿Eliminar todos los datos?' : `¿Eliminar datos de ${confirmDelete.clientName}?`}
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {confirmDelete.type === 'all' 
+                ? 'Esta acción eliminará permanentemente todas las estructuras y transacciones cargadas para todos los clientes. No se puede deshacer.'
+                : `Se eliminarán permanentemente la estructura de pólizas y todas las transacciones asociadas a ${confirmDelete.clientName}.`}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeDelete}
+                className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-lg shadow-red-200"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative mb-6">
@@ -177,16 +309,15 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50/50">
                 <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider">Contratante</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider text-center">Subsidiarias</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider text-center">Pólizas Padre</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider">Total Pagado</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider">Valor Total</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider">Estado</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-900 uppercase tracking-wider text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredClients.map((client) => {
-                const percentage = client.metrics.totalExpected === 0 ? 100 : Math.round((client.metrics.totalPaid / client.metrics.totalExpected) * 100);
                 return (
                   <tr 
                     key={client.cliente}
@@ -206,6 +337,11 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
                     </td>
                     <td className="py-4 px-6 text-center">
                       <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-bold">
+                        {client.metrics.numSubsidiaries}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-bold">
                         {client.metrics.numPadres}
                       </div>
                     </td>
@@ -218,15 +354,6 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
                       <div className="text-sm font-bold text-gray-900">
                         {formatCurrency(client.metrics.totalExpected)}
                       </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        percentage === 100 
-                          ? 'bg-green-50 text-green-700 border border-green-100' 
-                          : 'bg-amber-50 text-amber-700 border border-amber-100'
-                      }`}>
-                        {percentage === 100 ? 'Emitido' : 'POR EMITIR'}
-                      </span>
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex justify-end items-center gap-2">

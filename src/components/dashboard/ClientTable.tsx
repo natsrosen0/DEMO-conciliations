@@ -11,6 +11,8 @@ export interface Invoice {
   number: string;
   status: 'paid' | 'pending' | 'error';
   amount: string;
+  paidAmount?: string;
+  estado?: string;
 }
 
 export interface PolizaCobranza {
