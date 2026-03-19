@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Upload, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, MoreHorizontal, Trash2, Upload } from 'lucide-react';
 import { ReconciliationDetail } from './ReconciliationDetail';
-import { BulkUploadPanel } from './BulkUploadPanel';
+import { BulkBankUploadPanel } from './BulkBankUploadPanel';
 import { hoteleraTransactions, MonthlyTransaction } from '../../data/hoteleraTransactions';
 
 interface MonthlyTransactionsViewProps {
@@ -14,7 +14,9 @@ const defaultTransactions: MonthlyTransaction[] = [];
 
 export function MonthlyTransactionsView({ clientName, monthName, onBack }: MonthlyTransactionsViewProps) {
   const [selectedTxn, setSelectedTxn] = useState<MonthlyTransaction | null>(null);
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [isAddBankModalOpen, setIsAddBankModalOpen] = useState(false);
+  const [isBulkBankUploadOpen, setIsBulkBankUploadOpen] = useState(false);
+  const [newBankData, setNewBankData] = useState({ account: '', amount: '', date: '' });
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
   const [reconciliationToDelete, setReconciliationToDelete] = useState<string | null>(null);
   const storageKey = `nats_conciliation_reconciliations_${clientName}_${monthName}`;
@@ -64,61 +66,42 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
     }
   }, [selectedTxn, clientName]);
 
-  const handleAddReconciliation = () => {
-    const today = new Date();
-    const formattedDate = today.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const handleAddBank = () => {
     const newId = `TXN-${(transactions.length + 1).toString().padStart(3, '0')}`;
     
     const newReconciliation: MonthlyTransaction = {
       id: newId,
-      fecha: formattedDate,
+      account: newBankData.account || '-',
+      fecha: newBankData.date || new Date().toLocaleDateString('es-MX'),
       numRecibos: 0,
-      montoRecibido: '$0.00',
+      montoRecibido: formatCurrency(parseCurrency(newBankData.amount)),
       montoEsperado: '$0.00',
-      diferencia: '+$0.00',
-      estado: 'Conciliado'
+      diferencia: formatCurrency(parseCurrency(newBankData.amount)),
+      estado: 'No conciliado'
     };
     
     setTransactions(prev => [newReconciliation, ...prev]);
+    setIsAddBankModalOpen(false);
+    setNewBankData({ account: '', amount: '', date: '' });
   };
 
-  const handleBulkUpload = (data: any[]) => {
-    const today = new Date();
-    const formattedDate = today.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const newId = `TXN-${(transactions.length + 1).toString().padStart(3, '0')}`;
-    
-    // 1. Calculate totals for the new reconciliation
-    const totalEsperado = data.reduce((sum, item) => sum + parseCurrency(item.montoEsperado), 0);
-    // Use the transaction amount from the first row if provided, otherwise sum up the individual amounts
-    const firstRowMontoTransaccion = parseCurrency(data[0]?.montoTransaccion);
-    const totalRecibido = firstRowMontoTransaccion !== 0 ? firstRowMontoTransaccion : data.reduce((sum, item) => sum + parseCurrency(item.monto), 0);
-    const diff = totalRecibido - totalEsperado;
+  const handleBulkBankUpload = (data: any[]) => {
+    const newBanks: MonthlyTransaction[] = data.map((item, index) => {
+      const newId = `TXN-${(transactions.length + index + 1).toString().padStart(3, '0')}`;
+      return {
+        id: newId,
+        account: item.account || '-',
+        fecha: item.date || new Date().toLocaleDateString('es-MX'),
+        numRecibos: 0,
+        montoRecibido: formatCurrency(parseCurrency(item.amount)),
+        montoEsperado: '$0.00',
+        diferencia: formatCurrency(parseCurrency(item.amount)),
+        estado: 'No conciliado'
+      };
+    });
 
-    const newReconciliation: MonthlyTransaction = {
-      id: newId,
-      fecha: formattedDate,
-      numRecibos: data.length,
-      montoRecibido: formatCurrency(totalRecibido),
-      montoEsperado: formatCurrency(totalEsperado),
-      diferencia: (diff >= 0 ? '+' : '-') + formatCurrency(Math.abs(diff)),
-      estado: Math.abs(diff) < 0.01 ? 'Conciliado' : 'No conciliado'
-    };
-
-    // 2. Save the transactions for this new reconciliation to localStorage
-    const txnKey = `nats_conciliation_txns_${clientName}_${monthName}_${newId}`;
-    const formattedTxns = data.map(item => ({
-      id: Math.random().toString(36).substr(2, 9),
-      polizaPadre: item.polizaPadre,
-      polizaCobranza: item.polizaCobranza,
-      numRecibo: item.numRecibo,
-      montoEsperado: formatCurrency(parseCurrency(item.montoEsperado)),
-      monto: formatCurrency(parseCurrency(item.monto)),
-    }));
-    localStorage.setItem(txnKey, JSON.stringify(formattedTxns));
-
-    // 3. Add to the list
-    setTransactions(prev => [newReconciliation, ...prev]);
-    setIsBulkUploadOpen(false);
+    setTransactions(prev => [...newBanks, ...prev]);
+    setIsBulkBankUploadOpen(false);
   };
 
   const handleDeleteReconciliation = (id: string, e: React.MouseEvent) => {
@@ -153,7 +136,7 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
         clientName={clientName}
         monthName={monthName}
         reconciliationId={selectedTxn.id}
-        reconciliationName={selectedTxn.fecha}
+        reconciliationName={selectedTxn.account ? `${selectedTxn.account} (${selectedTxn.fecha})` : selectedTxn.fecha}
         onBack={() => setSelectedTxn(null)}
       />
     );
@@ -172,23 +155,23 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
           </button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">{clientName} · {monthName}</h1>
-            <p className="text-[11px] font-normal text-gray-500">{transactions.length} transacciones</p>
+            <p className="text-[11px] font-normal text-gray-500">{transactions.length} transacciones bancarias</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setIsBulkUploadOpen(true)}
+            onClick={() => setIsBulkBankUploadOpen(true)}
             className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-[11px] font-normal transition-colors shadow-sm"
           >
             <Upload className="w-4 h-4" />
             Carga Masiva
           </button>
           <button 
-            onClick={handleAddReconciliation}
+            onClick={() => setIsAddBankModalOpen(true)}
             className="flex items-center gap-2 bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-2.5 rounded-lg text-[11px] font-normal transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            Agregar
+            Agregar Deposito
           </button>
         </div>
       </div>
@@ -221,10 +204,10 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
+                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Monto</th>
                 <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                 <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Num. de Recibos</th>
-                <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Monto Recibido</th>
                 <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Monto Esperado</th>
                 <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Diferencia</th>
                 <th className="py-3 px-4 text-[12px] font-medium text-gray-500 uppercase tracking-wider">Estado</th>
@@ -240,10 +223,10 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
                     className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors cursor-pointer"
                     onClick={() => setSelectedTxn(row)}
                   >
-                    <td className="py-3 px-4 text-[12px] font-normal text-gray-500 font-mono">{row.id}</td>
+                    <td className="py-3 px-4 text-[12px] font-normal text-gray-500 font-mono">{row.account || row.id}</td>
+                    <td className={`py-3 px-4 text-[12px] font-medium ${isError ? 'text-red-500' : 'text-gray-900'}`}>{row.montoRecibido}</td>
                     <td className="py-3 px-4 text-[12px] font-normal text-gray-900">{row.fecha}</td>
                     <td className="py-3 px-4 text-[12px] font-normal text-gray-900">{row.numRecibos}</td>
-                    <td className={`py-3 px-4 text-[12px] font-medium ${isError ? 'text-red-500' : 'text-gray-900'}`}>{row.montoRecibido}</td>
                     <td className="py-3 px-4 text-[12px] font-medium text-gray-900">{row.montoEsperado}</td>
                     <td className={`py-3 px-4 text-[12px] font-medium ${isError ? 'text-red-500' : 'text-gray-900'}`}>{row.diferencia}</td>
                     <td className="py-3 px-4">
@@ -289,10 +272,67 @@ export function MonthlyTransactionsView({ clientName, monthName, onBack }: Month
         </div>
       </div>
 
-      <BulkUploadPanel
-        isOpen={isBulkUploadOpen}
-        onClose={() => setIsBulkUploadOpen(false)}
-        onUpload={handleBulkUpload}
+      {/* Add Bank Modal */}
+      {isAddBankModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Agregar Transacción Bancaria</h3>
+            
+            <div className="space-y-4 mb-8">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">Cuenta</label>
+                <input
+                  type="text"
+                  value={newBankData.account}
+                  onChange={(e) => setNewBankData(prev => ({ ...prev, account: e.target.value }))}
+                  placeholder="Ej: 1234567890"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6b21a8]/20 focus:border-[#6b21a8] transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">Monto</label>
+                <input
+                  type="text"
+                  value={newBankData.amount}
+                  onChange={(e) => setNewBankData(prev => ({ ...prev, amount: e.target.value }))}
+                  placeholder="Ej: 50000.00"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6b21a8]/20 focus:border-[#6b21a8] transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">Fecha</label>
+                <input
+                  type="text"
+                  value={newBankData.date}
+                  onChange={(e) => setNewBankData(prev => ({ ...prev, date: e.target.value }))}
+                  placeholder="DD/MM/YYYY"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6b21a8]/20 focus:border-[#6b21a8] transition-all"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsAddBankModalOpen(false)}
+                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-normal text-[11px] rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddBank}
+                className="flex-1 px-4 py-2.5 bg-[#6b21a8] text-white font-normal text-[11px] rounded-xl hover:bg-[#581c87] transition-colors shadow-sm"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <BulkBankUploadPanel
+        isOpen={isBulkBankUploadOpen}
+        onClose={() => setIsBulkBankUploadOpen(false)}
+        onUpload={handleBulkBankUpload}
       />
 
       {/* Delete Confirmation Modal */}

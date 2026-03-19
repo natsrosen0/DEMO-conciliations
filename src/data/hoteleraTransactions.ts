@@ -1,5 +1,6 @@
 export interface MonthlyTransaction {
   id: string;
+  account?: string;
   fecha: string;
   numRecibos: number;
   montoRecibido: string;
@@ -9,11 +10,11 @@ export interface MonthlyTransaction {
 }
 
 export const hoteleraTransactions: MonthlyTransaction[] = [
-  { id: 'TXN-H001', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$56,754,813.15', montoEsperado: '$56,754,813.15', diferencia: '+$0.00', estado: 'Conciliado' },
-  { id: 'TXN-H002', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$31,496,003.30', montoEsperado: '$31,496,003.30', diferencia: '+$0.00', estado: 'Conciliado' },
-  { id: 'TXN-H003', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$12,905,315.37', montoEsperado: '$12,905,315.37', diferencia: '+$0.00', estado: 'Conciliado' },
-  { id: 'TXN-H004', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$8,671,932.41', montoEsperado: '$8,671,932.41', diferencia: '+$0.00', estado: 'Conciliado' },
-  { id: 'TXN-H005', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$5,380,059.10', montoEsperado: '$5,380,059.10', diferencia: '+$0.00', estado: 'Conciliado' },
+  { id: 'TXN-H001', account: '74839201', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$56,754,813.15', montoEsperado: '$56,754,813.15', diferencia: '+$0.00', estado: 'Conciliado' },
+  { id: 'TXN-H002', account: '92018374', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$31,496,003.30', montoEsperado: '$31,496,003.30', diferencia: '+$0.00', estado: 'Conciliado' },
+  { id: 'TXN-H003', account: '10293847', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$12,905,315.37', montoEsperado: '$12,905,315.37', diferencia: '+$0.00', estado: 'Conciliado' },
+  { id: 'TXN-H004', account: '56473829', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$8,671,932.41', montoEsperado: '$8,671,932.41', diferencia: '+$0.00', estado: 'Conciliado' },
+  { id: 'TXN-H005', account: '83746251', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$5,380,059.10', montoEsperado: '$5,380,059.10', diferencia: '+$0.00', estado: 'Conciliado' },
   { id: 'TXN-H006', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$4,339,390.20', montoEsperado: '$4,339,390.20', diferencia: '+$0.00', estado: 'Conciliado' },
   { id: 'TXN-H007', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$2,475,813.99', montoEsperado: '$2,475,813.99', diferencia: '+$0.00', estado: 'Conciliado' },
   { id: 'TXN-H008', fecha: '26/02/2026', numRecibos: 1, montoRecibido: '$2,157,614.71', montoEsperado: '$2,157,614.71', diferencia: '+$0.00', estado: 'Conciliado' },
