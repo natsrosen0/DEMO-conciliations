@@ -13,7 +13,7 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [confirmDelete, setConfirmDelete] = useState<{ type: 'single' | 'all', clientName?: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ clientName: string } | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-MX', {
@@ -83,6 +83,7 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
     
     let totalExpected = 0;
     let totalPaid = 0;
+    let totalConciliated = 0;
     const padreNumbers = new Set<string>();
     const subsSet = new Set<string>();
     
@@ -92,6 +93,7 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
     // Map to track overrides and hierarchy from structure
     const reciboToMonto: Record<string, number> = {};
     const reciboToSub: Record<string, string> = {};
+    const reciboToEstado: Record<string, string> = {};
 
     uploadedStructure.forEach((item: any) => {
       const subName = item.subsidiaria || 'Subsidiaria Principal';
@@ -103,6 +105,9 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
         reciboToSub[item.recibo] = subName;
         if (item.monto) {
           reciboToMonto[item.recibo] = parseCurrency(item.monto);
+        }
+        if (item.estado) {
+          reciboToEstado[item.recibo] = item.estado;
         }
       }
     });
@@ -134,6 +139,9 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
               const montoRecibido = parseCurrency(txn.monto);
               let montoEsperado = parseCurrency(txn.montoEsperado);
               
+              const mappingEstado = txn.numRecibo ? reciboToEstado[txn.numRecibo] : null;
+              const isEmitido = !!((txn.estado || mappingEstado) && (txn.estado || mappingEstado).toLowerCase().includes('emitido'));
+              
               // Apply override if exists
               if (txn.numRecibo && reciboToMonto[txn.numRecibo] !== undefined) {
                 montoEsperado = reciboToMonto[txn.numRecibo];
@@ -142,6 +150,7 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
 
               totalExpected += montoEsperado;
               totalPaid += montoRecibido;
+              totalConciliated += isEmitido ? montoEsperado : 0;
             });
           }
         });
@@ -151,14 +160,18 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
     // Add expected amounts from structure for receipts that don't have transactions yet
     uploadedStructure.forEach((item: any) => {
       if (item.recibo && !processedRecibos.has(item.recibo) && item.monto) {
-        totalExpected += parseCurrency(item.monto);
+        const amt = parseCurrency(item.monto);
+        totalExpected += amt;
+        if (item.estado && item.estado.toLowerCase().includes('emitido')) {
+          totalConciliated += amt;
+        }
       }
     });
 
     return {
       numSubsidiaries: subsSet.size,
       numPadres: padreNumbers.size,
-      totalPaid,
+      totalPaid: totalConciliated,
       totalExpected
     };
   };
@@ -184,41 +197,30 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
 
   const handleDeleteStructure = (e: React.MouseEvent, clientName: string) => {
     e.stopPropagation();
-    setConfirmDelete({ type: 'single', clientName });
+    setConfirmDelete({ clientName });
   };
 
   const executeDelete = () => {
     if (!confirmDelete) return;
 
-    if (confirmDelete.type === 'single' && confirmDelete.clientName) {
-      const clientName = confirmDelete.clientName;
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (
-          key.startsWith(`nats_conciliation_structure_${clientName}`) ||
-          key.startsWith(`nats_conciliation_monthly_${clientName}`) ||
-          key.startsWith(`nats_conciliation_reconciliations_${clientName}`) ||
-          key.startsWith(`nats_conciliation_txns_${clientName}`)
-        )) {
-          keysToRemove.push(key);
-        }
+    const clientName = confirmDelete.clientName;
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.startsWith(`nats_conciliation_structure_${clientName}`) ||
+        key.startsWith(`nats_conciliation_monthly_${clientName}`) ||
+        key.startsWith(`nats_conciliation_reconciliations_${clientName}`) ||
+        key.startsWith(`nats_conciliation_txns_${clientName}`)
+      )) {
+        keysToRemove.push(key);
       }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-    } else if (confirmDelete.type === 'all') {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('nats_conciliation_')) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
     }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
 
     setRefreshTrigger(prev => prev + 1);
     setConfirmDelete(null);
-    if (selectedClient && confirmDelete.type === 'single' && confirmDelete.clientName === selectedClient.cliente) {
+    if (selectedClient && confirmDelete.clientName === selectedClient.cliente) {
       setSelectedClient(null);
     }
   };
@@ -240,10 +242,6 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
     );
   }
 
-  const handleClearAllData = () => {
-    setConfirmDelete({ type: 'all' });
-  };
-
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
@@ -251,13 +249,6 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Estructura de Pólizas</h1>
           <p className="text-sm text-gray-500 mt-1">Resumen de jerarquías y estados de conciliación por contratante.</p>
         </div>
-        <button
-          onClick={handleClearAllData}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100"
-        >
-          <Trash2 className="w-4 h-4" />
-          Limpiar Todo
-        </button>
       </div>
 
       {/* Confirmation Modal */}
@@ -265,12 +256,10 @@ export function PoliciesPage({ clients }: PoliciesPageProps) {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-2">
-              {confirmDelete.type === 'all' ? '¿Eliminar todos los datos?' : `¿Eliminar datos de ${confirmDelete.clientName}?`}
+              ¿Eliminar datos de {confirmDelete.clientName}?
             </h3>
             <p className="text-sm text-gray-500 mb-6">
-              {confirmDelete.type === 'all' 
-                ? 'Esta acción eliminará permanentemente todas las estructuras y transacciones cargadas para todos los clientes. No se puede deshacer.'
-                : `Se eliminarán permanentemente la estructura de pólizas y todas las transacciones asociadas a ${confirmDelete.clientName}.`}
+              Se eliminarán permanentemente la estructura de pólizas y todas las transacciones asociadas a {confirmDelete.clientName}.
             </p>
             <div className="flex gap-3">
               <button

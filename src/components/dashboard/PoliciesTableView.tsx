@@ -219,6 +219,7 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
   const calculateTotals = (items: any[], type: ViewLevel) => {
     let total = 0;
     let reconciled = 0;
+    let actualPaid = 0;
     let allEmitido = true;
     let hasInvoices = false;
 
@@ -226,14 +227,15 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
       if (invoices.length > 0) hasInvoices = true;
       invoices.forEach(inv => {
         const amt = parseCurrency(inv.amount);
+        const received = parseCurrency(inv.paidAmount || 0);
         const isInvEmitido = !!(inv.estado && inv.estado.toLowerCase().includes('emitido'));
         
-        // If it is "Emitido", reflect full amount in Total Pagado.
-        // If it is not, it remains as 0 as per user request.
-        const paid = isInvEmitido ? amt : 0;
+        // If it is "Emitido", reflect full amount in Total Pagado (Conciliated).
+        const conciliated = isInvEmitido ? amt : 0;
         
         total += amt;
-        reconciled += paid;
+        reconciled += conciliated;
+        actualPaid += received;
         
         if (!isInvEmitido) allEmitido = false;
       });
@@ -258,19 +260,18 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
 
     const remaining = total - reconciled;
     const percentage = total === 0 ? 100 : Math.round((reconciled / total) * 100);
+    const paidPercentage = total === 0 ? 100 : Math.round((actualPaid / total) * 100);
     
-    // If there are no invoices, it's not "Emitido" unless it's a special case, 
-    // but for hierarchy levels we want to know if everything under them is issued.
     const finalIsEmitido = hasInvoices ? allEmitido : (total === 0 && items.length > 0);
 
-    return { total, reconciled, remaining, percentage, isEmitido: finalIsEmitido };
+    return { total, reconciled, actualPaid, remaining, percentage, paidPercentage, isEmitido: finalIsEmitido };
   };
 
   const globalTotals = useMemo(() => calculateTotals(subsidiaries, 'subsidiaries'), [subsidiaries]);
 
-  const ProgressBar = ({ percentage }: { percentage: number }) => {
+  const ProgressBar = ({ percentage, color }: { percentage: number, color?: string }) => {
     const isComplete = percentage === 100;
-    const barColor = isComplete ? 'bg-green-600' : 'bg-[#6b21a8]';
+    const barColor = color || (isComplete ? 'bg-green-600' : 'bg-[#6b21a8]');
     return (
       <div className="flex items-center gap-3">
         <span className="text-xs font-bold w-10 text-gray-900">{percentage}%</span>
@@ -407,11 +408,9 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
                 )}
                 <th className="py-3 px-4 text-xs font-semibold text-gray-900">Total Pagado</th>
                 <th className="py-3 px-4 text-xs font-semibold text-gray-900">Valor Total</th>
+                <th className="py-3 px-4 text-xs font-semibold text-gray-900">% Pagado</th>
                 {(currentLevel === 'cobranzas' || currentLevel === 'invoices') && (
-                  <>
-                    <th className="py-3 px-4 text-xs font-semibold text-gray-900">Estado</th>
-                    <th className="py-3 px-4 text-xs font-semibold text-gray-900">% Conciliado</th>
-                  </>
+                  <th className="py-3 px-4 text-xs font-semibold text-gray-900">Estado</th>
                 )}
               </tr>
             </thead>
@@ -453,21 +452,19 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
                       </span>
                     </td>
                     <td className="py-3 px-4 text-xs font-bold text-gray-900">{formatCurrency(item.total)}</td>
+                    <td className="py-3 px-4">
+                      <ProgressBar percentage={item.percentage} color="bg-blue-600" />
+                    </td>
                     {(currentLevel === 'cobranzas' || currentLevel === 'invoices') && (
-                      <>
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            item.isEmitido
-                              ? 'bg-green-50 text-green-700 border border-green-100' 
-                              : 'bg-amber-50 text-amber-700 border border-amber-100'
-                          }`}>
-                            {item.isEmitido ? 'Emitido' : 'POR EMITIR'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <ProgressBar percentage={item.percentage} />
-                        </td>
-                      </>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          item.isEmitido
+                            ? 'bg-green-50 text-green-700 border border-green-100' 
+                            : 'bg-amber-50 text-amber-700 border border-amber-100'
+                        }`}>
+                          {item.isEmitido ? 'Emitido' : 'POR EMITIR'}
+                        </span>
+                      </td>
                     )}
                   </tr>
                 ))
@@ -576,17 +573,17 @@ export function PoliciesTableView({ client, onBack, onUploadClick }: PoliciesTab
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <div className="w-2 h-2 rounded-full bg-blue-600"></div>
             <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Pagado</h3>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-green-600">{formatCurrency(globalTotals.reconciled)}</span>
+            <span className="text-2xl font-bold text-blue-600">{formatCurrency(globalTotals.reconciled)}</span>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
-            <div className={`w-2 h-2 rounded-full ${globalTotals.percentage === 100 ? 'bg-green-500' : 'bg-[#6b21a8]'}`}></div>
-            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">% Conciliación Global</h3>
+            <div className={`w-2 h-2 rounded-full ${globalTotals.percentage === 100 ? 'bg-green-500' : 'bg-blue-600'}`}></div>
+            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">% Pagado</h3>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-gray-900">{globalTotals.percentage}%</span>

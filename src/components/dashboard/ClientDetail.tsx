@@ -103,6 +103,21 @@ export function ClientDetail({ client, onBack, onUpdateClient }: ClientDetailPro
     const saved = localStorage.getItem(storageKey);
     const data = saved ? JSON.parse(saved) : initialMonthlyData;
     
+    const structureKey = `nats_conciliation_structure_${client.cliente}`;
+    const savedStructure = localStorage.getItem(structureKey);
+    const uploadedStructure = savedStructure ? JSON.parse(savedStructure) : [];
+    
+    const reciboToMonto: Record<string, number> = {};
+    const reciboToEstado: Record<string, string> = {};
+    const parseCurrency = (val: string) => parseFloat(val.replace(/[^-0-9.]/g, '')) || 0;
+
+    uploadedStructure.forEach((item: any) => {
+      if (item.recibo) {
+        if (item.monto) reciboToMonto[item.recibo] = parseCurrency(item.monto);
+        if (item.estado) reciboToEstado[item.recibo] = item.estado;
+      }
+    });
+
     // Update each item with real data from its own transaction storage
     return data.map((item: any) => {
       const reconciliationsKey = `nats_conciliation_reconciliations_${client.cliente}_${item.mes}`;
@@ -110,7 +125,7 @@ export function ClientDetail({ client, onBack, onUpdateClient }: ClientDetailPro
       
       let totalEsperado = 0;
       let totalRecibido = 0;
-      const parseCurrency = (val: string) => parseFloat(val.replace(/[^-0-9.]/g, '')) || 0;
+      let totalConciliado = 0;
 
       if (savedReconciliations) {
         const reconciliations = JSON.parse(savedReconciliations);
@@ -119,17 +134,30 @@ export function ClientDetail({ client, onBack, onUpdateClient }: ClientDetailPro
           const savedTxns = localStorage.getItem(txnKey);
           if (savedTxns) {
             const txns = JSON.parse(savedTxns);
-            totalEsperado += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.montoEsperado), 0);
-            totalRecibido += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.monto), 0);
+            txns.forEach((t: any) => {
+              let amt = parseCurrency(t.montoEsperado);
+              const received = parseCurrency(t.monto);
+              
+              const mappingEstado = t.numRecibo ? reciboToEstado[t.numRecibo] : null;
+              const isEmitido = !!((t.estado || mappingEstado) && (t.estado || mappingEstado).toLowerCase().includes('emitido'));
+              
+              if (t.numRecibo && reciboToMonto[t.numRecibo] !== undefined) {
+                amt = reciboToMonto[t.numRecibo];
+              }
+              
+              totalEsperado += amt;
+              totalRecibido += received;
+              totalConciliado += isEmitido ? amt : 0;
+            });
           }
         });
       }
       
-      const percentage = totalEsperado === 0 ? 100 : Math.round((totalRecibido / totalEsperado) * 100);
+      const percentage = totalEsperado === 0 ? 100 : Math.round((totalConciliado / totalEsperado) * 100);
       
       return {
         ...item,
-        monto: new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalRecibido),
+        monto: new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalConciliado),
         porcentaje: Math.min(100, Math.max(0, percentage)),
         status: 'completed'
       };
@@ -145,13 +173,27 @@ export function ClientDetail({ client, onBack, onUpdateClient }: ClientDetailPro
   // Re-calculate when coming back from detail view
   useEffect(() => {
     if (!selectedReconciliation) {
+      const structureKey = `nats_conciliation_structure_${client.cliente}`;
+      const savedStructure = localStorage.getItem(structureKey);
+      const uploadedStructure = savedStructure ? JSON.parse(savedStructure) : [];
+      
+      const parseCurrency = (val: string) => parseFloat(val.replace(/[^-0-9.]/g, '')) || 0;
+      const reciboToMonto: Record<string, number> = {};
+      const reciboToEstado: Record<string, string> = {};
+      uploadedStructure.forEach((item: any) => {
+        if (item.recibo) {
+          if (item.monto) reciboToMonto[item.recibo] = parseCurrency(item.monto);
+          if (item.estado) reciboToEstado[item.recibo] = item.estado;
+        }
+      });
+
       setMonthlyData(prev => prev.map(item => {
         const reconciliationsKey = `nats_conciliation_reconciliations_${client.cliente}_${item.mes}`;
         const savedReconciliations = localStorage.getItem(reconciliationsKey);
         
         let totalEsperado = 0;
         let totalRecibido = 0;
-        const parseCurrency = (val: string) => parseFloat(val.replace(/[^-0-9.]/g, '')) || 0;
+        let totalConciliado = 0;
 
         if (savedReconciliations) {
           const reconciliations = JSON.parse(savedReconciliations);
@@ -160,17 +202,30 @@ export function ClientDetail({ client, onBack, onUpdateClient }: ClientDetailPro
             const savedTxns = localStorage.getItem(txnKey);
             if (savedTxns) {
               const txns = JSON.parse(savedTxns);
-              totalEsperado += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.montoEsperado), 0);
-              totalRecibido += txns.reduce((sum: number, t: any) => sum + parseCurrency(t.monto), 0);
+              txns.forEach((t: any) => {
+                let amt = parseCurrency(t.montoEsperado);
+                const received = parseCurrency(t.monto);
+                
+                const mappingEstado = t.numRecibo ? reciboToEstado[t.numRecibo] : null;
+                const isEmitido = !!((t.estado || mappingEstado) && (t.estado || mappingEstado).toLowerCase().includes('emitido'));
+                
+                if (t.numRecibo && reciboToMonto[t.numRecibo] !== undefined) {
+                  amt = reciboToMonto[t.numRecibo];
+                }
+                
+                totalEsperado += amt;
+                totalRecibido += received;
+                totalConciliado += isEmitido ? amt : 0;
+              });
             }
           });
         }
         
-        const percentage = totalEsperado === 0 ? 100 : Math.round((totalRecibido / totalEsperado) * 100);
+        const percentage = totalEsperado === 0 ? 100 : Math.round((totalConciliado / totalEsperado) * 100);
         
         return {
           ...item,
-          monto: new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalRecibido),
+          monto: new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalConciliado),
           porcentaje: Math.min(100, Math.max(0, percentage)),
           status: 'completed'
         };
@@ -224,7 +279,7 @@ export function ClientDetail({ client, onBack, onUpdateClient }: ClientDetailPro
           </button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">{client.cliente}</h1>
-            <p className="text-sm text-gray-500">{client.porcentaje}% conciliado (global)</p>
+            <p className="text-sm text-gray-500">{client.porcentaje}% pagado (global)</p>
           </div>
         </div>
         
@@ -414,8 +469,8 @@ export function ClientDetail({ client, onBack, onUpdateClient }: ClientDetailPro
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/2">Mes</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/4">Monto</th>
-                <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/4">% Conciliado</th>
+                <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/4">Total Pagado</th>
+                <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/4">% Pagado</th>
               </tr>
             </thead>
             <tbody>

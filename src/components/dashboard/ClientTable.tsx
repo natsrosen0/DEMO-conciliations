@@ -39,14 +39,16 @@ export interface ClientData {
   transacciones: number;
   porConciliar: string;
   porcentaje: number;
+  porcentajePago?: number;
+  totalPagado?: string;
   gnpResponsables?: Responsible[];
   intermediarioResponsables?: Responsible[];
   subsidiaries?: Subsidiary[];
 }
 
-const ProgressBar = ({ percentage }: { percentage: number }) => {
+  const ProgressBar = ({ percentage, color }: { percentage: number, color?: string }) => {
   const isComplete = percentage === 100;
-  const barColor = isComplete ? 'bg-green-600' : 'bg-[#6b21a8]';
+  const barColor = color || (isComplete ? 'bg-green-600' : 'bg-[#6b21a8]');
   const bgColor = 'bg-gray-100';
 
   return (
@@ -77,11 +79,12 @@ export function ClientTable({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-200">
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/5">Cliente</th>
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/5">Agente</th>
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/5">Transacciones</th>
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/5">Por conciliar</th>
-              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/5">% Conciliado</th>
+              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">Cliente</th>
+              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">Agente</th>
+              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">Transacciones</th>
+              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">Total Pagado</th>
+              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">Por conciliar</th>
+              <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-1/6">% Pagado</th>
               <th className="py-3 px-4 text-xs font-semibold text-gray-900 w-16"></th>
             </tr>
           </thead>
@@ -95,9 +98,10 @@ export function ClientTable({
                 <td className="py-3 px-4 text-xs font-bold text-gray-900">{row.cliente}</td>
                 <td className="py-3 px-4 text-xs text-gray-500">{row.agente}</td>
                 <td className="py-3 px-4 text-xs text-gray-500">{row.transacciones}</td>
+                <td className="py-3 px-4 text-xs font-bold text-green-600">{row.totalPagado}</td>
                 <td className="py-3 px-4 text-xs text-gray-500">{row.porConciliar}</td>
                 <td className="py-3 px-4">
-                  <ProgressBar percentage={row.porcentaje} />
+                  <ProgressBar percentage={row.porcentajePago || 0} color="bg-blue-600" />
                 </td>
                 <td className="py-3 px-4 text-right">
                   <button 
