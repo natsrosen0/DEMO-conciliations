@@ -13,6 +13,7 @@ export interface AddTransactionPanelProps {
     montoEsperado?: string;
     monto?: string;
     montoTransaccion?: string;
+    estado?: string;
     type?: TransactionType;
     isEditing?: boolean;
   } | null;
@@ -27,6 +28,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
   const [montoEsperado, setMontoEsperado] = useState('');
   const [montoRecibido, setMontoRecibido] = useState('');
   const [montoTransaccion, setMontoTransaccion] = useState('');
+  const [estado, setEstado] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -42,6 +44,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
         setMontoEsperado(cleanMontoEsperado);
         setMontoRecibido(cleanMontoRecibido);
         setMontoTransaccion(cleanMontoTransaccion);
+        setEstado(initialData.estado || '');
         
         if (initialData.type) {
           setType(initialData.type);
@@ -53,6 +56,7 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
         setMontoEsperado('');
         setMontoRecibido('');
         setMontoTransaccion('');
+        setEstado('');
         setType('poliza');
       }
     }
@@ -67,7 +71,8 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
       numRecibo, 
       montoEsperado, 
       monto: montoRecibido,
-      montoTransaccion 
+      montoTransaccion,
+      estado
     });
     onClose();
   };
@@ -234,6 +239,25 @@ export function AddTransactionPanel({ isOpen, onClose, initialData, onSubmit }: 
                 className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900 text-[11px] font-normal"
                 placeholder="Ej. 1000.00"
               />
+            </div>
+
+            <div>
+              <label htmlFor="estado" className="block text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">
+                Estado
+              </label>
+              <select
+                id="estado"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#6b21a8] focus:ring-1 focus:ring-[#6b21a8] outline-none transition-shadow text-gray-900 text-[11px] font-normal bg-white"
+              >
+                <option value="">Seleccionar estado...</option>
+                <option value="EMITIDO">EMITIDO</option>
+                <option value="EMITIDA">EMITIDA</option>
+                <option value="REHABILITACION">REHABILITACION</option>
+                <option value="PENDIENTE">PENDIENTE</option>
+                <option value="CANCELADO">CANCELADO</option>
+              </select>
             </div>
           </form>
         </div>

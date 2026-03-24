@@ -185,7 +185,8 @@ export function PoliciesTableView({
           let foundUnpaid = false;
           let cobranzaHasError = false;
           cobranza.invoices.forEach(inv => {
-            const isInvPaid = inv.status === 'paid' || (inv.estado && inv.estado.toLowerCase().includes('emitido'));
+            const currentEstado = (inv.estado || '').toUpperCase();
+            const isInvPaid = currentEstado === 'EMITIDO' || currentEstado === 'EMITIDA';
             if (isInvPaid && foundUnpaid) {
               inv.outOfOrder = true;
               cobranzaHasError = true;
@@ -275,7 +276,8 @@ export function PoliciesTableView({
       invoices.forEach(inv => {
         const amt = parseCurrency(inv.amount);
         const received = parseCurrency(inv.paidAmount || 0);
-        const isInvEmitido = !!(inv.estado && inv.estado.toLowerCase().includes('emitido'));
+        const currentEstado = (inv.estado || '').toUpperCase();
+        const isInvEmitido = currentEstado === 'EMITIDO' || currentEstado === 'EMITIDA';
         
         // If it is "Emitido", reflect full amount in Total Pagado (Conciliated).
         const conciliated = isInvEmitido ? amt : 0;
@@ -517,13 +519,27 @@ export function PoliciesTableView({
                     </td>
                     {(currentLevel === 'cobranzas' || currentLevel === 'invoices') && (
                       <td className="py-3 px-4">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
-                          item.isEmitido
-                            ? 'bg-green-50 text-green-700 border border-green-100' 
-                            : 'bg-amber-50 text-amber-700 border border-amber-100'
-                        }`}>
-                          {item.isEmitido ? 'Emitido' : 'POR EMITIR'}
-                        </span>
+                        {currentLevel === 'invoices' ? (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
+                            (item.estado?.toUpperCase() === 'EMITIDO' || item.estado?.toUpperCase() === 'EMITIDA')
+                              ? 'bg-green-50 text-green-700 border border-green-100' 
+                              : item.estado === 'REHABILITACION'
+                                ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                                : item.estado === 'CANCELADO'
+                                  ? 'bg-red-50 text-red-700 border border-red-100'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-100'
+                          }`}>
+                            {item.estado || 'POR EMITIR'}
+                          </span>
+                        ) : (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
+                            item.isEmitido
+                              ? 'bg-green-50 text-green-700 border border-green-100' 
+                              : 'bg-amber-50 text-amber-700 border border-amber-100'
+                          }`}>
+                            {item.isEmitido ? 'Emitido' : 'POR EMITIR'}
+                          </span>
+                        )}
                       </td>
                     )}
                   </tr>

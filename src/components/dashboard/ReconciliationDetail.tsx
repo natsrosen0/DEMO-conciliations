@@ -11,6 +11,7 @@ interface Transaction {
   montoEsperado: string;
   monto: string;
   montoTransaccion?: string;
+  estado?: string;
 }
 
 const initialTransactions: Transaction[] = [
@@ -50,6 +51,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
     numRecibo?: string;
     montoEsperado?: string;
     monto?: string;
+    estado?: string;
     type?: TransactionType;
     isEditing?: boolean;
   } | null>(null);
@@ -99,6 +101,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
             montoEsperado: formatCurrency(amountEsperado),
             monto: formatCurrency(amountRecibido),
             montoTransaccion: amountTransaccion !== 0 ? formatCurrency(amountTransaccion) : t.montoTransaccion,
+            estado: data.estado || t.estado,
           };
         }
         return t;
@@ -113,6 +116,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
         montoEsperado: formatCurrency(amountEsperado),
         monto: formatCurrency(amountRecibido),
         montoTransaccion: amountTransaccion !== 0 ? formatCurrency(amountTransaccion) : undefined,
+        estado: data.estado
       };
 
       // Add to the beginning of the list so it's visible immediately
@@ -131,6 +135,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
       montoEsperado: formatCurrency(parseCurrency(item.montoEsperado)),
       monto: formatCurrency(parseCurrency(item.monto)),
       montoTransaccion: formatCurrency(parseCurrency(item.montoTransaccion)),
+      estado: item.estado,
     }));
 
     setTransactions(prev => [...newTransactions, ...prev]);
@@ -159,6 +164,7 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
         numRecibo: transaction.numRecibo,
         montoEsperado: transaction.montoEsperado,
         monto: transaction.monto,
+        estado: transaction.estado,
         type: type || (transaction.numRecibo.startsWith('NC') ? 'nota_credito' : 'poliza'),
         isEditing
       });
@@ -287,7 +293,10 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
               {transactions.map((row) => {
                 const montoEsperadoNum = parseFloat(row.montoEsperado.replace(/[$,]/g, ''));
                 const montoNum = parseFloat(row.monto.replace(/[$,]/g, ''));
-                const estado = montoEsperadoNum === montoNum ? 'Conciliado' : 'No conciliado';
+                const currentEstado = (row.estado || '').toUpperCase();
+                const isEmitido = currentEstado === 'EMITIDO' || currentEstado === 'EMITIDA';
+                const displayEstado = row.estado || (montoEsperadoNum === montoNum ? 'Conciliado' : 'No conciliado');
+                
                 return (
                   <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
                     <td className="py-3 px-4 text-[12px] font-normal text-gray-900">{row.polizaPadre}</td>
@@ -298,11 +307,15 @@ export function ReconciliationDetail({ clientName, monthName, reconciliationId, 
                     <td className="py-3 px-4 text-[12px] font-normal text-gray-500">{row.montoTransaccion || '-'}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium ${
-                        estado === 'Conciliado' 
+                        isEmitido 
                           ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
+                          : displayEstado === 'REHABILITACION'
+                            ? 'bg-blue-100 text-blue-800'
+                            : displayEstado === 'CANCELADO'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {estado}
+                        {displayEstado}
                       </span>
                     </td>
                     <td className="py-3 px-4 relative">

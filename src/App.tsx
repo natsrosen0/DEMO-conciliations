@@ -72,7 +72,8 @@ export default function App() {
                   const received = parseCurrency(t.monto);
                   
                   const mappingEstado = t.numRecibo ? reciboToEstado[t.numRecibo] : null;
-                  const isEmitido = !!((t.estado || mappingEstado) && (t.estado || mappingEstado).toLowerCase().includes('emitido'));
+                  const currentEstado = (t.estado || mappingEstado || '').toUpperCase();
+                  const isEmitido = currentEstado === 'EMITIDO' || currentEstado === 'EMITIDA';
                   
                   if (t.numRecibo && reciboToMonto[t.numRecibo] !== undefined) {
                     amt = reciboToMonto[t.numRecibo];
@@ -97,7 +98,8 @@ export default function App() {
           if (item.recibo && !processedRecibos.has(item.recibo) && item.monto) {
             const amt = parseCurrency(item.monto);
             totalEsperadoGlobal += amt;
-            const isEmitido = item.estado && item.estado.toLowerCase().includes('emitido');
+            const currentEstado = (item.estado || '').toUpperCase();
+            const isEmitido = currentEstado === 'EMITIDO' || currentEstado === 'EMITIDA';
             if (isEmitido) {
               totalConciliadoGlobal += amt;
             }
@@ -201,7 +203,8 @@ export default function App() {
                     const received = parseCurrency(t.monto);
                     
                     const mappingEstado = t.numRecibo ? reciboToEstado[t.numRecibo] : null;
-                    const isEmitido = !!((t.estado || mappingEstado) && (t.estado || mappingEstado).toLowerCase().includes('emitido'));
+                    const currentEstado = (t.estado || mappingEstado || '').toUpperCase();
+                    const isEmitido = currentEstado === 'EMITIDO' || currentEstado === 'EMITIDA';
                     
                     if (t.numRecibo && reciboToMonto[t.numRecibo] !== undefined) {
                       amt = reciboToMonto[t.numRecibo];
@@ -226,7 +229,8 @@ export default function App() {
             if (item.recibo && !processedRecibos.has(item.recibo) && item.monto) {
               const amt = parseCurrency(item.monto);
               totalEsperadoGlobal += amt;
-              const isEmitido = item.estado && item.estado.toLowerCase().includes('emitido');
+              const currentEstado = (item.estado || '').toUpperCase();
+              const isEmitido = currentEstado === 'EMITIDO' || currentEstado === 'EMITIDA';
               if (isEmitido) {
                 totalConciliadoGlobal += amt;
               }
